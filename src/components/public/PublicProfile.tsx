@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import type { Block, BlockSize, Density, BlockStyle, SubstituteContent } from '../../types'
 import { getBlockPrimaryUrl, normalizeUrl, resolvePublicBlocks, type ResolvedBlockMode } from '../../utils/schedule'
 import { applySmartVariation, getTrafficSource } from '../../utils/smartBlocks'
+import { recordBlockClick, recordProfileView } from '../../services/analyticsService'
+import { createLead } from '../../services/leadService'
 import {
   ArrowUpRight,
   Camera,
@@ -64,6 +66,21 @@ export function PublicProfile({
   const source = useMemo(() => getTrafficSource(), [])
 
   const resolved = useMemo(() => resolvePublicBlocks(blocks, now), [blocks, now])
+
+  // Count one view per browser session for this profile. It avoids inflating the
+  // dashboard when React remounts the public page during development.
+  useEffect(() => {
+    const userId = blocks[0]?.userId
+    if (!userId || resolved.length === 0) return
+
+    const day = new Date().toISOString().slice(0, 10)
+    const sessionKey = `getlink-analytics-viewed-${userId}-${day}`
+    if (sessionStorage.getItem(sessionKey)) return
+    sessionStorage.setItem(sessionKey, '1')
+    void recordProfileView(userId, resolved.map((item) => item.block.id)).catch(() => {
+      // Analytics must never interfere with viewing a public profile.
+    })
+  }, [blocks, resolved])
 
   return (
     <div
@@ -153,6 +170,9 @@ function ThemedBlock({
         href={normalizedHref}
         target="_blank"
         rel="noopener noreferrer"
+        onClick={() => {
+          if (block.userId) void recordBlockClick(block.userId, block.id).catch(() => {})
+        }}
         className={`${wrapperClass} transition-transform duration-200 hover:-translate-y-0.5`}
         style={surfaceStyle}
       >
@@ -335,34 +355,7 @@ function ThemedBody({ block, theme }: { block: Block; theme: PublicProfileTheme 
       )
 
     case 'newsletter':
-      return (
-        <div className="flex h-full w-full flex-col justify-center gap-2">
-          <div className="flex items-center gap-2">
-            <Mail className="h-5 w-5" style={{ color: theme.vars.accent }} />
-            <h3 className="font-semibold" style={displayStyle(theme)}>
-              {d.title || 'Newsletter'}
-            </h3>
-          </div>
-          {d.description ? (
-            <p className="text-xs" style={mutedStyle(theme)}>{d.description}</p>
-          ) : null}
-          <div className="mt-1 flex items-center gap-2">
-            <span
-              className="flex-1 truncate px-3 py-1.5 text-xs"
-              style={{
-                border: `1px solid ${theme.vars.border}`,
-                borderRadius: theme.radius,
-                color: theme.vars.muted,
-              }}
-            >
-              {d.placeholder || 'seu@email.com'}
-            </span>
-            <span className="px-3 py-1.5 text-xs font-semibold" style={pillStyle(theme)}>
-              {d.buttonText || 'Assinar'}
-            </span>
-          </div>
-        </div>
-      )
+      return <LeadCapture block={block} theme={theme} source="newsletter" title={d.title || 'Newsletter'} description={d.description} buttonText={d.buttonText || 'Assinar'} emailPlaceholder={d.placeholder || 'seu@email.com'} />
 
     case 'gallery':
       return (
@@ -485,20 +478,7 @@ function ThemedBody({ block, theme }: { block: Block; theme: PublicProfileTheme 
       )
 
     case 'form':
-      return (
-        <div className="flex h-full w-full flex-col justify-between gap-2">
-          <MessageSquare className="h-5 w-5" style={{ color: theme.vars.accent }} />
-          <h3 className="font-semibold" style={displayStyle(theme)}>{d.title || 'Formulário'}</h3>
-          <div className="flex flex-col gap-1.5">
-            {(d.fields || ['Nome', 'E-mail']).slice(0, 3).map((f: string) => (
-              <div key={f} className="h-6 rounded-md text-[10px] px-2 flex items-center"
-                style={{ border: '1px solid ' + theme.vars.border, color: theme.vars.muted }}>
-                {f}
-              </div>
-            ))}
-          </div>
-        </div>
-      )
+      return <LeadCapture block={block} theme={theme} source="form" title={d.title || 'Formulário'} buttonText={d.buttonText || 'Enviar'} fields={d.fields || ['Nome', 'E-mail']} successMessage={d.successMessage} />
 
     case 'faq':
       return (
@@ -542,4 +522,62 @@ function ThemedBody({ block, theme }: { block: Block; theme: PublicProfileTheme 
         </span>
       )
   }
+}
+
+function LeadCapture({
+  block,
+  theme,
+  source,
+  title,
+  description,
+  buttonText,
+  emailPlaceholder,
+  fields,
+  successMessage,
+}: {
+  block: Block
+  theme: PublicProfileTheme
+  source: 'newsletter' | 'form'
+  title: string
+  description?: string
+  buttonText: string
+  emailPlaceholder?: string
+  fields?: string[]
+  successMessage?: string
+}) {
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const formFields = source === 'newsletter' ? ['E-mail'] : fields || ['Nome', 'E-mail']
+
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const emailField = formFields.find((field) => /e-?mail|mail/i.test(field)) || 'E-mail'
+    const nameField = formFields.find((field) => /nome|name/i.test(field))
+    const email = values[emailField]?.trim()
+    if (!email || !block.userId) return
+    setSubmitting(true)
+    try {
+      await createLead({ userId: block.userId, blockId: block.id, name: nameField ? values[nameField]?.trim() || '' : '', email, source })
+      setSubmitted(true)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (submitted) return <div className="flex h-full w-full items-center justify-center text-center text-sm font-semibold" style={displayStyle(theme)}>{successMessage || 'Recebemos seu contato!'}</div>
+
+  return (
+    <form onSubmit={submit} className="flex h-full w-full flex-col justify-center gap-2" onClick={(event) => event.stopPropagation()}>
+      <div className="flex items-center gap-2">{source === 'newsletter' ? <Mail className="h-5 w-5" style={{ color: theme.vars.accent }} /> : <MessageSquare className="h-5 w-5" style={{ color: theme.vars.accent }} />}<h3 className="font-semibold" style={displayStyle(theme)}>{title}</h3></div>
+      {description ? <p className="text-xs" style={mutedStyle(theme)}>{description}</p> : null}
+      <div className={`mt-1 flex gap-2 ${source === 'form' ? 'flex-col' : ''}`}>
+        {formFields.slice(0, source === 'form' ? 3 : 1).map((field) => {
+          const isEmail = /e-?mail|mail/i.test(field)
+          return <input key={field} required={source === 'form' || isEmail} type={isEmail ? 'email' : 'text'} value={values[field] || ''} onChange={(event) => setValues((current) => ({ ...current, [field]: event.target.value }))} placeholder={isEmail ? emailPlaceholder || field : field} className="min-w-0 flex-1 px-3 py-1.5 text-xs outline-none" style={{ border: `1px solid ${theme.vars.border}`, borderRadius: theme.radius, background: 'transparent', color: theme.vars.text }} />
+        })}
+        <button type="submit" disabled={submitting} className="shrink-0 px-3 py-1.5 text-xs font-semibold disabled:opacity-60" style={pillStyle(theme)}>{submitting ? 'Enviando...' : buttonText}</button>
+      </div>
+    </form>
+  )
 }

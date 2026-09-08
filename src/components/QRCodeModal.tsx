@@ -19,6 +19,7 @@ export function QRCodeModal ({ isOpen, onClose, url, username }: Props) {
         if (canvas) {
             const link = document.createElement('a')
             link.download = `qrcode-${username}.png`
+            link.href = canvas.toDataURL('image/png')
             link.click()
         }
     }
@@ -50,7 +51,7 @@ return (
               value={url}
               size={200}
               bgColor="#ffffff"
-              fgColor="var(--color-text-primary)"
+              fgColor="#111827"
               level="H"
               includeMargin
             />

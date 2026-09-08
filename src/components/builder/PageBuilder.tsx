@@ -6,9 +6,11 @@ import { BlockLibrary } from './BlockLibrary'
 import { TemplatePicker } from './TemplatePicker'
 import { BlockCard } from './BlockCard'
 import { PropertiesPanel } from './PropertiesPanel'
-import { Monitor, Smartphone, Eye, Share2, Sparkles, ArrowLeft, LayoutGrid } from 'lucide-react'
+import { Monitor, Smartphone, Eye, Share2, Sparkles, ArrowLeft, LayoutGrid, QrCode } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import { useUserProfile } from '../../hooks/useUserProfile'
+import { QRCodeModal } from '../QRCodeModal'
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(' ')
@@ -16,10 +18,12 @@ function cn(...classes: (string | false | null | undefined)[]) {
 
 export function PageBuilder({ userId }: { userId: string }) {
   const { blocks, loading, addBlock, addBlocks, removeBlock, updateBlock, reorder } = useBlocks(userId)
+  const { profile } = useUserProfile(userId)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const navigate = useNavigate()
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [showPicker, setShowPicker] = useState(true)
+  const [showQrCode, setShowQrCode] = useState(false)
   const dragIndex = useRef<number | null>(null)
 
   // Relógio para refletir status de agendamento no canvas do editor
@@ -30,6 +34,7 @@ export function PageBuilder({ userId }: { userId: string }) {
   }, [])
 
   const selected = blocks.find((b) => b.id === selectedId) ?? null
+  const publicUrl = profile?.username ? `${window.location.origin}/${profile.username}` : ''
 
   function getDefaultData(type: BlockType): any {
     const defaults: Record<BlockType, any> = {
@@ -166,7 +171,7 @@ export function PageBuilder({ userId }: { userId: string }) {
               Minha Página
             </h1>
             <p className="hidden text-xs text-gray-400 sm:block">
-              getlink.to/marina-alves
+              {profile?.username ? `${window.location.host}/${profile.username}` : 'Defina seu username para publicar'}
             </p>
           </div>
         </div>
@@ -223,6 +228,15 @@ export function PageBuilder({ userId }: { userId: string }) {
           >
             <Eye className="h-4 w-4" />
             Prévia
+          </button>
+          <button
+            type="button"
+            disabled={!publicUrl}
+            onClick={() => setShowQrCode(true)}
+            className="hidden items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 sm:flex"
+            style={{ borderColor: 'oklch(1 0 0 / 12%)', background: 'oklch(0.21 0.018 285)' }}
+          >
+            <QrCode className="h-4 w-4" /> QR Code
           </button>
           <button
             type="button"
@@ -316,6 +330,7 @@ export function PageBuilder({ userId }: { userId: string }) {
           <PropertiesPanel block={selected} blocks={blocks} onChange={updateBlockData} onDelete={deleteBlock} />
         </div>
       </div>
+      {publicUrl && profile?.username ? <QRCodeModal isOpen={showQrCode} onClose={() => setShowQrCode(false)} url={publicUrl} username={profile.username} /> : null}
     </div>
   )
 }

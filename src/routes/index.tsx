@@ -11,6 +11,7 @@ const Dashboard = lazy(() => import('../pages/Dashboard').then(m => ({ default: 
 const MyPage = lazy(() => import('../pages/MyPage').then(m => ({ default: m.MyPage })));
 const Design = lazy(() => import('../pages/Design').then(m => ({ default: m.Design })));
 const Analytics = lazy(() => import('../pages/Analytics').then(m => ({ default: m.Analytics })));
+const Audience = lazy(() => import('../pages/Audience').then(m => ({ default: m.Audience })));
 const Settings = lazy(() => import('../pages/Settings').then(m => ({ default: m.Settings })));
 const ProfileEdit = lazy(() => import('../pages/ProfileEdit').then(m => ({ default: m.ProfileEdit })));
 const PublicProfile = lazy(() => import('../pages/PublicProfile').then(m => ({ default: m.PublicProfile })));
@@ -64,6 +65,11 @@ export function AppRoutes() {
         <Route path="/dashboard/analytics" element={
           <PrivateRoute>
             <Analytics />
+          </PrivateRoute>
+        } />
+        <Route path="/dashboard/audience" element={
+          <PrivateRoute>
+            <Audience />
           </PrivateRoute>
         } />
         <Route path="/dashboard/settings" element={

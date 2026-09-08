@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
 import { MainLayout } from '../layouts/MainLayout'
-import { Shield, Trash2, Eye, EyeOff, AlertTriangle } from 'lucide-react'
+import { Shield, Trash2, Eye, EyeOff, AlertTriangle, QrCode } from 'lucide-react'
 import {
   reauthenticateWithCredential,
   EmailAuthProvider,
@@ -9,9 +9,14 @@ import {
   deleteUser,
 } from 'firebase/auth'
 import toast from 'react-hot-toast'
+import { useUserProfile } from '../hooks/useUserProfile'
+import { QRCodeModal } from '../components/QRCodeModal'
 
 export function Settings() {
   const { user, logout } = useAuth()
+  const { profile } = useUserProfile(user?.uid)
+  const [showQrCode, setShowQrCode] = useState(false)
+  const publicUrl = profile?.username ? `${window.location.origin}/${profile.username}` : ''
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -94,6 +99,23 @@ export function Settings() {
   return (
     <MainLayout>
       <div className="max-w-2xl mx-auto space-y-8">
+        <div className="card p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-soft)] flex items-center justify-center">
+                <QrCode size={20} className="text-[var(--color-primary)]" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">QR Code do perfil</h2>
+                <p className="text-xs text-[var(--color-text-secondary)]">Baixe um QR Code que leva à sua página pública.</p>
+              </div>
+            </div>
+            <button type="button" disabled={!publicUrl} onClick={() => setShowQrCode(true)} className="btn btn-primary btn-md disabled:opacity-50">
+              <QrCode size={18} /> Ver e baixar
+            </button>
+          </div>
+          {!publicUrl ? <p className="mt-3 text-xs text-[var(--color-text-muted)]">Defina um username para disponibilizar o QR Code.</p> : null}
+        </div>
         <div>
           <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Configurações</h1>
           <p className="text-[var(--color-text-secondary)] text-sm mt-1">
@@ -237,6 +259,7 @@ export function Settings() {
           )}
         </div>
       </div>
+      {publicUrl && profile?.username ? <QRCodeModal isOpen={showQrCode} onClose={() => setShowQrCode(false)} url={publicUrl} username={profile.username} /> : null}
     </MainLayout>
   )
 }
