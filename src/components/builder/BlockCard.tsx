@@ -1,5 +1,6 @@
 import type { Block } from '../../types'
 import { getBlockStatus } from '../../utils/schedule'
+import { hasSmartVariation } from '../../utils/smartBlocks'
 import {
   ArrowUpRight,
   Camera,
@@ -17,6 +18,7 @@ import {
   MessageSquare,
   HelpCircle,
   Quote,
+  Sparkles,
 } from 'lucide-react'
 
 const SIZE_CLASSES: Record<Block['size'], string> = {
@@ -79,6 +81,18 @@ export function BlockCard({
         >
           <CalendarClock className="h-3 w-3" />
           {scheduleStatus === 'expired' ? 'Expirado' : 'Programado'}
+        </span>
+      ) : null}
+      {hasSmartVariation(block) ? (
+        <span
+          className="absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold backdrop-blur"
+          style={{
+            background: 'oklch(0.72 0.19 285 / 18%)',
+            color: 'oklch(0.85 0.16 285)',
+          }}
+        >
+          <Sparkles className="h-3 w-3" />
+          Smart
         </span>
       ) : null}
       <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"

@@ -5,10 +5,13 @@ import {
   type AfterExpiryBehavior,
   type BlockSchedule,
   type SubstituteContent,
+  type SmartVariation,
+  type TrafficSource,
   BLOCK_LIBRARY,
   SIZE_LABELS,
+  TRAFFIC_SOURCE_LABELS,
 } from '../../types'
-import { Trash2, MousePointerClick, CalendarClock } from 'lucide-react'
+import { Trash2, MousePointerClick, CalendarClock, Sparkles } from 'lucide-react'
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -177,6 +180,15 @@ export function PropertiesPanel({
           blocks={blocks}
           currentBlockId={block.id}
           onChange={(schedule) => updateData('schedule', schedule)}
+        />
+      ) : null}
+
+      {/* Smart Block — variação por origem (apenas link / produto / serviço) */}
+      {['link', 'product', 'service'].includes(block.type) ? (
+        <SmartSection
+          smart={d.smart}
+          blockType={block.type}
+          onChange={(smart) => updateData('smart', smart)}
         />
       ) : null}
 
@@ -442,6 +454,157 @@ function ScheduleSection({
               </Field>
             </>
           ) : null}
+        </div>
+      ) : null}
+    </Field>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SEÇÃO SMART BLOCK (link / produto / serviço)
+   ═══════════════════════════════════════════════════════════════ */
+
+/** Atualiza um campo da variação preservando os demais (monta o objeto completo). */
+function patchSmart(smart: SmartVariation, patch: Partial<SmartVariation>): SmartVariation {
+  return {
+    source: smart.source,
+    title: smart.title ?? '',
+    description: smart.description ?? '',
+    url: smart.url ?? '',
+    price: smart.price ?? '',
+    imageUrl: smart.imageUrl ?? '',
+    actionLabel: smart.actionLabel ?? '',
+    ...patch,
+  }
+}
+
+function SmartSection({
+  smart,
+  blockType,
+  onChange,
+}: {
+  smart?: SmartVariation | null
+  blockType: Block['type']
+  onChange: (smart: SmartVariation | null) => void
+}) {
+  const enabled = Boolean(smart)
+
+  const destLabel =
+    blockType === 'link'
+      ? 'URL alternativa'
+      : blockType === 'product'
+        ? 'Link de compra alternativo'
+        : 'URL da ação alternativa'
+
+  return (
+    <Field label="Smart Block">
+      <label className="flex cursor-pointer items-center gap-2 select-none">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => onChange(e.target.checked ? { source: 'instagram' } : null)}
+          className="h-4 w-4 rounded accent-[oklch(0.58_0.24_285)]"
+        />
+        <span className="flex items-center gap-1.5 text-xs font-medium text-gray-300">
+          <Sparkles className="h-3.5 w-3.5" />
+          Variação por origem
+        </span>
+      </label>
+
+      {enabled && smart ? (
+        <div
+          className="flex flex-col gap-3 rounded-lg border p-3"
+          style={{ borderColor: 'oklch(1 0 0 / 12%)' }}
+        >
+          <Field label="Se veio de">
+            <select
+              value={smart.source}
+              onChange={(e) =>
+                onChange({ ...smart, source: e.target.value as TrafficSource })
+              }
+              className={`w-full rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors ${focusStyle}`}
+              style={inputStyle}
+            >
+              {Object.entries(TRAFFIC_SOURCE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Título alternativo">
+            <input
+              value={smart.title || ''}
+              onChange={(e) =>
+                onChange(patchSmart(smart, { title: e.target.value }))
+              }
+              className={`w-full rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors ${focusStyle}`}
+              style={inputStyle}
+              placeholder="Deixe vazio para manter o original"
+            />
+          </Field>
+
+          <Field label="Descrição alternativa">
+            <textarea
+              value={smart.description || ''}
+              onChange={(e) =>
+                onChange(patchSmart(smart, { description: e.target.value }))
+              }
+              rows={2}
+              className={`w-full resize-none rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors ${focusStyle}`}
+              style={inputStyle}
+              placeholder="Deixe vazio para manter o original"
+            />
+          </Field>
+
+          <Field label={destLabel}>
+            <input
+              value={smart.url || ''}
+              onChange={(e) =>
+                onChange(patchSmart(smart, { url: e.target.value }))
+              }
+              className={`w-full rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors ${focusStyle}`}
+              style={inputStyle}
+              placeholder="https://"
+            />
+          </Field>
+
+          {blockType === 'product' ? (
+            <Field label="Preço alternativo">
+              <input
+                value={smart.price || ''}
+                onChange={(e) =>
+                  onChange(patchSmart(smart, { price: e.target.value }))
+                }
+                className={`w-full rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors ${focusStyle}`}
+                style={inputStyle}
+                placeholder="Deixe vazio para manter o original"
+              />
+            </Field>
+          ) : null}
+
+          {blockType === 'service' ? (
+            <Field label="Rótulo do botão alternativo">
+              <input
+                value={smart.actionLabel || ''}
+                onChange={(e) =>
+                  onChange(patchSmart(smart, { actionLabel: e.target.value }))
+                }
+                className={`w-full rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors ${focusStyle}`}
+                style={inputStyle}
+                placeholder="Deixe vazio para manter o original"
+              />
+            </Field>
+          ) : null}
+
+          <p className="text-xs text-gray-500">
+            Se veio de{' '}
+            <span className="font-medium text-gray-300">
+              {TRAFFIC_SOURCE_LABELS[smart.source]}
+            </span>{' '}
+            → mostrar este conteúdo
+          </p>
         </div>
       ) : null}
     </Field>

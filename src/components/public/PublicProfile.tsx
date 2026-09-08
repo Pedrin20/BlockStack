@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Block, BlockSize, Density, BlockStyle, SubstituteContent } from '../../types'
-import { normalizeUrl, resolvePublicBlocks, type ResolvedBlockMode } from '../../utils/schedule'
+import { getBlockPrimaryUrl, normalizeUrl, resolvePublicBlocks, type ResolvedBlockMode } from '../../utils/schedule'
+import { applySmartVariation, getTrafficSource } from '../../utils/smartBlocks'
 import {
   ArrowUpRight,
   Camera,
@@ -59,6 +60,9 @@ export function PublicProfile({
     return () => window.clearInterval(id)
   }, [])
 
+  // Origem do visitante (utm_source ou referrer) — dispara a variação Smart Block
+  const source = useMemo(() => getTrafficSource(), [])
+
   const resolved = useMemo(() => resolvePublicBlocks(blocks, now), [blocks, now])
 
   return (
@@ -71,7 +75,7 @@ export function PublicProfile({
           {resolved.map((r) => (
             <ThemedBlock
               key={r.key}
-              block={r.block}
+              block={applySmartVariation(r.block, source)}
               theme={theme}
               mode={r.mode}
               clickUrl={r.clickUrl}
@@ -131,13 +135,25 @@ function ThemedBlock({
       <ThemedBody block={block} theme={theme} />
     )
 
-  if (mode === 'redirect' && clickUrl) {
+  // Link / produto / serviço abrem sua URL primária; o modo redirect usa a URL
+  // do bloco-alvo resolvida pelo agendamento.
+  const href =
+    mode === 'redirect'
+      ? clickUrl
+      : mode === 'normal' && isClickableType(block.type)
+        ? getBlockPrimaryUrl(block)
+        : undefined
+
+  const normalizedHref = href ? normalizeUrl(href) : undefined
+  const wrapperClass = `flex flex-col overflow-hidden p-4 ${SIZE_CLASSES[block.size]}`
+
+  if (normalizedHref) {
     return (
       <a
-        href={clickUrl}
+        href={normalizedHref}
         target="_blank"
         rel="noopener noreferrer"
-        className={`flex flex-col overflow-hidden p-4 ${SIZE_CLASSES[block.size]}`}
+        className={`${wrapperClass} transition-transform duration-200 hover:-translate-y-0.5`}
         style={surfaceStyle}
       >
         {content}
@@ -146,13 +162,14 @@ function ThemedBlock({
   }
 
   return (
-    <div
-      className={`flex flex-col overflow-hidden p-4 ${SIZE_CLASSES[block.size]}`}
-      style={surfaceStyle}
-    >
+    <div className={wrapperClass} style={surfaceStyle}>
       {content}
     </div>
   )
+}
+
+function isClickableType(type: Block['type']): boolean {
+  return type === 'link' || type === 'product' || type === 'service'
 }
 
 function SubstituteBody({

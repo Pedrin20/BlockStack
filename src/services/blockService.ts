@@ -195,6 +195,7 @@ function migrateBlockData(type: string, data: any): any {
         url: data.url || '',
         description: data.description || '',
         ...(data.schedule ? { schedule: data.schedule } : {}),
+        ...(data.smart ? { smart: data.smart } : {}),
       }
     case 'link-featured':
       return { title: data.title || '', description: data.description || '', imageUrl: data.imageUrl || '', price: '', linkUrl: data.url || '' }

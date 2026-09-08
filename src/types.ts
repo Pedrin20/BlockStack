@@ -65,6 +65,7 @@ export interface LinkBlockData {
   url: string
   description: string
   schedule?: BlockSchedule
+  smart?: SmartVariation | null
 }
 
 export interface ProductBlockData {
@@ -74,6 +75,7 @@ export interface ProductBlockData {
   price: string
   linkUrl: string
   schedule?: BlockSchedule
+  smart?: SmartVariation | null
 }
 
 export interface ServiceBlockData {
@@ -82,6 +84,7 @@ export interface ServiceBlockData {
   actionLabel: string
   actionUrl: string
   schedule?: BlockSchedule
+  smart?: SmartVariation | null
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -108,6 +111,33 @@ export interface BlockSchedule {
   redirectBlockId?: string | null
   /** Conteúdo do substituto usado quando `afterExpiry === 'replace'` */
   substitute?: SubstituteContent
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SMART BLOCKS — variação de conteúdo por origem do tráfego
+   ═══════════════════════════════════════════════════════════════ */
+
+export type TrafficSource = 'instagram' | 'youtube' | 'linkedin' | 'google' | 'other'
+
+export interface SmartVariation {
+  /** Origem que dispara a variação */
+  source: TrafficSource
+  /** Campos opcionais — string vazia ou ausente mantém o conteúdo original */
+  title?: string
+  description?: string
+  /** Destino principal: link.url / product.linkUrl / service.actionUrl */
+  url?: string
+  price?: string
+  imageUrl?: string
+  actionLabel?: string
+}
+
+export const TRAFFIC_SOURCE_LABELS: Record<TrafficSource, string> = {
+  instagram: 'Instagram',
+  youtube: 'YouTube',
+  linkedin: 'LinkedIn',
+  google: 'Google',
+  other: 'Outro',
 }
 
 export interface GalleryBlockData {
