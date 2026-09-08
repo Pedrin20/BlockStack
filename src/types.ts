@@ -1,3 +1,5 @@
+import type { Timestamp } from 'firebase/firestore'
+
 /* ═══════════════════════════════════════════════════════════════
    LEGACY TYPES
    ═══════════════════════════════════════════════════════════════ */
@@ -62,6 +64,7 @@ export interface LinkBlockData {
   title: string
   url: string
   description: string
+  schedule?: BlockSchedule
 }
 
 export interface ProductBlockData {
@@ -70,6 +73,7 @@ export interface ProductBlockData {
   imageUrl: string
   price: string
   linkUrl: string
+  schedule?: BlockSchedule
 }
 
 export interface ServiceBlockData {
@@ -77,6 +81,33 @@ export interface ServiceBlockData {
   description: string
   actionLabel: string
   actionUrl: string
+  schedule?: BlockSchedule
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   BLOCK SCHEDULE — janela de publicação e expiração
+   ═══════════════════════════════════════════════════════════════ */
+
+export type AfterExpiryBehavior = 'hide' | 'redirect' | 'replace'
+
+export interface SubstituteContent {
+  title: string
+  description: string
+  buttonLabel?: string
+  buttonUrl?: string
+}
+
+export interface BlockSchedule {
+  /** Data/hora de início da publicação — antes dela o bloco fica oculto */
+  startsAt?: Timestamp | null
+  /** Data/hora de expiração — depois dela aplica-se `afterExpiry` */
+  expiresAt?: Timestamp | null
+  /** Comportamento após a expiração (padrão: 'hide') */
+  afterExpiry?: AfterExpiryBehavior
+  /** Id do bloco-alvo usado quando `afterExpiry === 'redirect'` */
+  redirectBlockId?: string | null
+  /** Conteúdo do substituto usado quando `afterExpiry === 'replace'` */
+  substitute?: SubstituteContent
 }
 
 export interface GalleryBlockData {

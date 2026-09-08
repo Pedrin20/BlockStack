@@ -1,4 +1,5 @@
 import type { Block } from '../../types'
+import { getBlockStatus } from '../../utils/schedule'
 import {
   ArrowUpRight,
   Camera,
@@ -12,7 +13,6 @@ import {
   CalendarClock,
   Code2,
   Headphones,
-  
   Calendar,
   MessageSquare,
   HelpCircle,
@@ -28,6 +28,7 @@ const SIZE_CLASSES: Record<Block['size'], string> = {
 
 export function BlockCard({
   block,
+  now,
   selected,
   onSelect,
   draggable,
@@ -36,6 +37,7 @@ export function BlockCard({
   onDrop,
 }: {
   block: Block
+  now: number
   selected?: boolean
   onSelect?: () => void
   draggable?: boolean
@@ -46,6 +48,8 @@ export function BlockCard({
   const borderColor = selected
     ? 'oklch(0.58 0.24 285)'
     : 'oklch(1 0 0 / 12%)'
+
+  const scheduleStatus = getBlockStatus(block, now)
 
   return (
     <button
@@ -64,6 +68,19 @@ export function BlockCard({
         boxShadow: selected ? '0 0 0 2px oklch(0.58 0.24 285 / 60%)' : 'none',
       }}
     >
+      {scheduleStatus === 'scheduled' || scheduleStatus === 'expired' ? (
+        <span
+          className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold backdrop-blur"
+          style={
+            scheduleStatus === 'expired'
+              ? { background: 'oklch(0.62 0.21 25 / 18%)', color: 'oklch(0.82 0.16 25)' }
+              : { background: 'oklch(0.72 0.16 75 / 18%)', color: 'oklch(0.85 0.15 80)' }
+          }
+        >
+          <CalendarClock className="h-3 w-3" />
+          {scheduleStatus === 'expired' ? 'Expirado' : 'Programado'}
+        </span>
+      ) : null}
       <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-md opacity-0 backdrop-blur transition-opacity group-hover:opacity-100"
         style={{ background: 'oklch(0.17 0.015 285 / 60%)', color: 'oklch(0.68 0.02 285)' }}
       >

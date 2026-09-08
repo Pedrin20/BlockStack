@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Block, BlockType, BlockTypeDef } from '../../types'
 import type { Template } from '../../lib/templates'
 import { useBlocks } from '../../hooks/useBlocks'
@@ -21,6 +21,13 @@ export function PageBuilder({ userId }: { userId: string }) {
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [showPicker, setShowPicker] = useState(true)
   const dragIndex = useRef<number | null>(null)
+
+  // Relógio para refletir status de agendamento no canvas do editor
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30_000)
+    return () => window.clearInterval(id)
+  }, [])
 
   const selected = blocks.find((b) => b.id === selectedId) ?? null
 
@@ -270,6 +277,7 @@ export function PageBuilder({ userId }: { userId: string }) {
                     <BlockCard
                       key={block.id}
                       block={block}
+                      now={now}
                       selected={block.id === selectedId}
                       onSelect={() => setSelectedId(block.id)}
                       draggable
@@ -305,7 +313,7 @@ export function PageBuilder({ userId }: { userId: string }) {
           className="hidden w-64 shrink-0 overflow-y-auto md:block xl:w-72"
           style={{ borderLeft: '1px solid oklch(1 0 0 / 10%)' }}
         >
-          <PropertiesPanel block={selected} onChange={updateBlockData} onDelete={deleteBlock} />
+          <PropertiesPanel block={selected} blocks={blocks} onChange={updateBlockData} onDelete={deleteBlock} />
         </div>
       </div>
     </div>

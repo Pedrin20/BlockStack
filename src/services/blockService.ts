@@ -190,7 +190,12 @@ function migrateBlockData(type: string, data: any): any {
     case 'profile':
       return { displayName: data.displayName || '', bio: data.bio || '', avatarUrl: data.avatarUrl || '' }
     case 'link':
-      return { title: data.title || '', url: data.url || '', description: data.description || '' }
+      return {
+        title: data.title || '',
+        url: data.url || '',
+        description: data.description || '',
+        ...(data.schedule ? { schedule: data.schedule } : {}),
+      }
     case 'link-featured':
       return { title: data.title || '', description: data.description || '', imageUrl: data.imageUrl || '', price: '', linkUrl: data.url || '' }
     case 'socials':

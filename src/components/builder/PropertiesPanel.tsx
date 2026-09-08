@@ -1,12 +1,37 @@
-import { type Block, type BlockSize, BLOCK_LIBRARY, SIZE_LABELS } from '../../types'
-import { Trash2, MousePointerClick } from 'lucide-react'
+import { Timestamp } from 'firebase/firestore'
+import {
+  type Block,
+  type BlockSize,
+  type AfterExpiryBehavior,
+  type BlockSchedule,
+  type SubstituteContent,
+  BLOCK_LIBRARY,
+  SIZE_LABELS,
+} from '../../types'
+import { Trash2, MousePointerClick, CalendarClock } from 'lucide-react'
+
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  borderRadius: '0.5rem',
+  border: '1px solid oklch(1 0 0 / 12%)',
+  background: 'oklch(0.145 0 0)',
+  padding: '0.5rem 0.75rem',
+  fontSize: '0.875rem',
+  color: 'white',
+  outline: 'none',
+}
+
+const focusStyle =
+  'focus:border-[oklch(0.58_0.24_285)] focus:ring-2 focus:ring-[oklch(0.58_0.24_285_/_0.3)]'
 
 export function PropertiesPanel({
   block,
+  blocks,
   onChange,
   onDelete,
 }: {
   block: Block | null
+  blocks: Block[]
   onChange: (patch: Partial<Block>) => void
   onDelete: () => void
 }) {
@@ -32,19 +57,6 @@ export function PropertiesPanel({
   const def = BLOCK_LIBRARY.find((d) => d.type === block.type)
   const allowedSizes = def?.allowedSizes ?? ['1x1', '2x1', '2x2', 'full']
   const d = block.data as any
-
-  const inputStyle = {
-    width: '100%',
-    borderRadius: '0.5rem',
-    border: '1px solid oklch(1 0 0 / 12%)',
-    background: 'oklch(0.145 0 0)',
-    padding: '0.5rem 0.75rem',
-    fontSize: '0.875rem',
-    color: 'white',
-    outline: 'none',
-  }
-
-  const focusStyle = 'focus:border-[oklch(0.58_0.24_285)] focus:ring-2 focus:ring-[oklch(0.58_0.24_285_/_0.3)]'
 
   function updateData(field: string, value: any) {
     onChange({ data: { ...d, [field]: value } } as any)
@@ -158,6 +170,16 @@ export function PropertiesPanel({
         </Field>
       ) : null}
 
+      {/* Scheduling — apenas blocos link / produto / serviço */}
+      {['link', 'product', 'service'].includes(block.type) ? (
+        <ScheduleSection
+          schedule={d.schedule}
+          blocks={blocks}
+          currentBlockId={block.id}
+          onChange={(schedule) => updateData('schedule', schedule)}
+        />
+      ) : null}
+
       {/* Size selector */}
       <Field label="Tamanho">
         <div className="grid grid-cols-2 gap-2">
@@ -211,4 +233,217 @@ function SizeGlyph({ size, active }: { size: BlockSize; active: boolean }) {
     'full': <span className={`h-2.5 w-8 rounded-sm ${cls}`} />,
   }
   return <span className="flex h-6 items-center justify-center">{map[size]}</span>
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SEÇÃO DE AGENDAMENTO (link / produto / serviço)
+   ═══════════════════════════════════════════════════════════════ */
+
+function toMs(ts: unknown): number | null {
+  if (!ts) return null
+  const maybe = ts as { toDate?: () => Date }
+  const d = typeof maybe.toDate === 'function' ? maybe.toDate() : new Date(ts as string)
+  return Number.isFinite(d.getTime()) ? d.getTime() : null
+}
+
+function toLocalInputValue(ts?: unknown): string {
+  const ms = toMs(ts)
+  if (ms === null) return ''
+  const d = new Date(ms)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function fromLocalInputValue(value: string): Timestamp | null {
+  if (!value) return null
+  const t = new Date(value)
+  return Number.isFinite(t.getTime()) ? Timestamp.fromDate(t) : null
+}
+
+/** Atualiza um campo do substituto preservando os demais (monta o objeto completo). */
+function patchSubstitute(schedule: BlockSchedule, patch: Partial<SubstituteContent>): BlockSchedule {
+  return {
+    ...schedule,
+    substitute: {
+      title: schedule.substitute?.title ?? '',
+      description: schedule.substitute?.description ?? '',
+      buttonLabel: schedule.substitute?.buttonLabel ?? '',
+      buttonUrl: schedule.substitute?.buttonUrl ?? '',
+      ...patch,
+    },
+  }
+}
+
+function blockLabel(block: Block): string {
+  const d = block.data as any
+  return (
+    d.title ||
+    d.displayName ||
+    d.content?.slice(0, 30) ||
+    BLOCK_LIBRARY.find((x) => x.type === block.type)?.label ||
+    block.type
+  )
+}
+
+function ScheduleSection({
+  schedule,
+  blocks,
+  currentBlockId,
+  onChange,
+}: {
+  schedule?: BlockSchedule | null
+  blocks: Block[]
+  currentBlockId: string
+  onChange: (schedule: BlockSchedule | null) => void
+}) {
+  const enabled = Boolean(schedule)
+  const otherBlocks = blocks.filter((b) => b.id !== currentBlockId)
+  const startMs = toMs(schedule?.startsAt)
+  const endMs = toMs(schedule?.expiresAt)
+  const invalidWindow = startMs !== null && endMs !== null && endMs <= startMs
+
+  return (
+    <Field label="Agendamento">
+      <label className="flex cursor-pointer items-center gap-2 select-none">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => onChange(e.target.checked ? { afterExpiry: 'hide' } : null)}
+          className="h-4 w-4 rounded accent-[oklch(0.58_0.24_285)]"
+        />
+        <span className="flex items-center gap-1.5 text-xs font-medium text-gray-300">
+          <CalendarClock className="h-3.5 w-3.5" />
+          Agendar publicação (início e expiração)
+        </span>
+      </label>
+
+      {enabled && schedule ? (
+        <div
+          className="flex flex-col gap-3 rounded-lg border p-3"
+          style={{ borderColor: 'oklch(1 0 0 / 12%)' }}
+        >
+          <Field label="Início da publicação">
+            <input
+              type="datetime-local"
+              value={toLocalInputValue(schedule.startsAt)}
+              onChange={(e) =>
+                onChange({ ...schedule, startsAt: fromLocalInputValue(e.target.value) })
+              }
+              className={`w-full rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors ${focusStyle}`}
+              style={inputStyle}
+            />
+          </Field>
+
+          <Field label="Expira em">
+            <input
+              type="datetime-local"
+              value={toLocalInputValue(schedule.expiresAt)}
+              onChange={(e) =>
+                onChange({ ...schedule, expiresAt: fromLocalInputValue(e.target.value) })
+              }
+              className={`w-full rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors ${focusStyle}`}
+              style={inputStyle}
+            />
+          </Field>
+
+          {invalidWindow ? (
+            <p className="text-xs" style={{ color: 'oklch(0.72 0.17 25)' }}>
+              A data de expiração deve ser depois do início da publicação.
+            </p>
+          ) : null}
+
+          <Field label="Após expirar">
+            <select
+              value={schedule.afterExpiry || 'hide'}
+              onChange={(e) =>
+                onChange({ ...schedule, afterExpiry: e.target.value as AfterExpiryBehavior })
+              }
+              className={`w-full rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors ${focusStyle}`}
+              style={inputStyle}
+            >
+              <option value="hide">Esconder</option>
+              <option value="redirect">Redirecionar para outro bloco</option>
+              <option value="replace">Mostrar bloco substituto</option>
+            </select>
+          </Field>
+
+          {schedule.afterExpiry === 'redirect' ? (
+            <Field label="Bloco de destino">
+              {otherBlocks.length > 0 ? (
+                <select
+                  value={schedule.redirectBlockId || ''}
+                  onChange={(e) =>
+                    onChange({ ...schedule, redirectBlockId: e.target.value || null })
+                  }
+                  className={`w-full rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors ${focusStyle}`}
+                  style={inputStyle}
+                >
+                  <option value="">Selecione um bloco...</option>
+                  {otherBlocks.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {blockLabel(b)}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="text-xs text-gray-500">
+                  Adicione outro bloco para poder redirecionar.
+                </p>
+              )}
+            </Field>
+          ) : null}
+
+          {schedule.afterExpiry === 'replace' ? (
+            <>
+              <Field label="Título do substituto">
+                <input
+                  value={schedule.substitute?.title || ''}
+                  onChange={(e) =>
+                    onChange(patchSubstitute(schedule, { title: e.target.value }))
+                  }
+                  className={`w-full rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors ${focusStyle}`}
+                  style={inputStyle}
+                  placeholder="Oferta encerrada"
+                />
+              </Field>
+              <Field label="Descrição do substituto">
+                <textarea
+                  value={schedule.substitute?.description || ''}
+                  onChange={(e) =>
+                    onChange(patchSubstitute(schedule, { description: e.target.value }))
+                  }
+                  rows={2}
+                  className={`w-full resize-none rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors ${focusStyle}`}
+                  style={inputStyle}
+                  placeholder="Este produto não está mais disponível..."
+                />
+              </Field>
+              <Field label="Rótulo do botão (opcional)">
+                <input
+                  value={schedule.substitute?.buttonLabel || ''}
+                  onChange={(e) =>
+                    onChange(patchSubstitute(schedule, { buttonLabel: e.target.value }))
+                  }
+                  className={`w-full rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors ${focusStyle}`}
+                  style={inputStyle}
+                  placeholder="Ver novidades"
+                />
+              </Field>
+              <Field label="URL do botão (opcional)">
+                <input
+                  value={schedule.substitute?.buttonUrl || ''}
+                  onChange={(e) =>
+                    onChange(patchSubstitute(schedule, { buttonUrl: e.target.value }))
+                  }
+                  className={`w-full rounded-lg px-3 py-2 text-sm text-white outline-none transition-colors ${focusStyle}`}
+                  style={inputStyle}
+                  placeholder="https://"
+                />
+              </Field>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+    </Field>
+  )
 }

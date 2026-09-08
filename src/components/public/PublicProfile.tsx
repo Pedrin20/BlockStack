@@ -1,4 +1,6 @@
-import type { Block, BlockSize, Density, BlockStyle } from '../../types'
+import { useEffect, useMemo, useState } from 'react'
+import type { Block, BlockSize, Density, BlockStyle, SubstituteContent } from '../../types'
+import { normalizeUrl, resolvePublicBlocks, type ResolvedBlockMode } from '../../utils/schedule'
 import {
   ArrowUpRight,
   Camera,
@@ -50,6 +52,15 @@ export function PublicProfile({
 }) {
   const density = DENSITY_CONFIG[theme.density] || DENSITY_CONFIG.standard
 
+  // Reavalia a janela de publicação ao vivo (a cada 30s) sem recarregar a página
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30_000)
+    return () => window.clearInterval(id)
+  }, [])
+
+  const resolved = useMemo(() => resolvePublicBlocks(blocks, now), [blocks, now])
+
   return (
     <div
       className={`min-h-full w-full px-4 py-8 sm:px-6 ${className || ''}`}
@@ -57,8 +68,15 @@ export function PublicProfile({
     >
       <div className="mx-auto max-w-2xl">
         <div className={`grid grid-cols-2 sm:grid-cols-4 ${density.rows} ${density.gap}`}>
-          {blocks.map((block) => (
-            <ThemedBlock key={block.id} block={block} theme={theme} />
+          {resolved.map((r) => (
+            <ThemedBlock
+              key={r.key}
+              block={r.block}
+              theme={theme}
+              mode={r.mode}
+              clickUrl={r.clickUrl}
+              substitute={r.substitute}
+            />
           ))}
         </div>
         <p
@@ -72,7 +90,19 @@ export function PublicProfile({
   )
 }
 
-function ThemedBlock({ block, theme }: { block: Block; theme: PublicProfileTheme }) {
+function ThemedBlock({
+  block,
+  theme,
+  mode = 'normal',
+  clickUrl,
+  substitute,
+}: {
+  block: Block
+  theme: PublicProfileTheme
+  mode?: ResolvedBlockMode
+  clickUrl?: string
+  substitute?: SubstituteContent
+}) {
   const surfaceStyle: React.CSSProperties = {
     borderRadius: theme.radius,
     fontFamily: theme.vars.fontDisplay,
@@ -94,12 +124,81 @@ function ThemedBlock({ block, theme }: { block: Block; theme: PublicProfileTheme
           }),
   }
 
+  const content =
+    mode === 'substitute' ? (
+      <SubstituteBody substitute={substitute} theme={theme} />
+    ) : (
+      <ThemedBody block={block} theme={theme} />
+    )
+
+  if (mode === 'redirect' && clickUrl) {
+    return (
+      <a
+        href={clickUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={`flex flex-col overflow-hidden p-4 ${SIZE_CLASSES[block.size]}`}
+        style={surfaceStyle}
+      >
+        {content}
+      </a>
+    )
+  }
+
   return (
     <div
       className={`flex flex-col overflow-hidden p-4 ${SIZE_CLASSES[block.size]}`}
       style={surfaceStyle}
     >
-      <ThemedBody block={block} theme={theme} />
+      {content}
+    </div>
+  )
+}
+
+function SubstituteBody({
+  substitute,
+  theme,
+}: {
+  substitute?: SubstituteContent
+  theme: PublicProfileTheme
+}) {
+  const title = substitute?.title || 'Conteúdo encerrado'
+  const description = substitute?.description || ''
+  const buttonLabel = substitute?.buttonLabel
+  const buttonUrl = substitute?.buttonUrl
+
+  return (
+    <div className="flex h-full w-full flex-col justify-between gap-3">
+      <div>
+        <h3 className="font-semibold" style={displayStyle(theme)}>
+          {title}
+        </h3>
+        {description ? (
+          <p className="mt-1 text-sm leading-relaxed line-clamp-3" style={mutedStyle(theme)}>
+            {description}
+          </p>
+        ) : null}
+      </div>
+      {buttonLabel ? (
+        buttonUrl ? (
+          <a
+            href={normalizeUrl(buttonUrl)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-fit items-center gap-1 px-3 py-1 text-sm font-semibold"
+            style={pillStyle(theme)}
+          >
+            {buttonLabel}
+          </a>
+        ) : (
+          <span
+            className="inline-flex w-fit items-center gap-1 px-3 py-1 text-sm font-semibold"
+            style={pillStyle(theme)}
+          >
+            {buttonLabel}
+          </span>
+        )
+      ) : null}
     </div>
   )
 }
