@@ -28,17 +28,17 @@ export function TemplatePicker({ onSelect, onSkip }: Props) {
       className="flex h-full flex-col items-center justify-center p-6"
       style={{
         background:
-          'radial-gradient(circle at 1px 1px, oklch(1 0 0 / 10%) 1px, transparent 0)',
+          'var(--canvas-dots, radial-gradient(circle at 1px 1px, rgba(255,255,255,0.10) 1px, transparent 0))',
         backgroundSize: '22px 22px',
       }}
     >
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="mb-6 text-center">
-          <h2 className="text-2xl font-bold tracking-tight text-white">
+          <h2 className="text-2xl font-bold tracking-tight text-ink">
             Como quer começar?
           </h2>
-          <p className="mt-1 text-sm text-gray-400">
+          <p className="mt-1 text-sm text-dim">
             Escolha um template ou comece do zero. Você pode editar tudo depois.
           </p>
         </div>
@@ -48,8 +48,8 @@ export function TemplatePicker({ onSelect, onSkip }: Props) {
           <div
             className="flex gap-1 rounded-xl p-1"
             style={{
-              border: '1px solid oklch(1 0 0 / 12%)',
-              background: 'oklch(0.21 0.018 285)',
+              border: '1px solid var(--color-border-strong)',
+              background: 'var(--color-surface-raised)',
             }}
           >
             {CATEGORIES.map((cat) => (
@@ -61,9 +61,9 @@ export function TemplatePicker({ onSelect, onSkip }: Props) {
                 style={{
                   background:
                     category === cat.id
-                      ? 'oklch(0.58 0.24 285)'
+                      ? 'var(--accent)'
                       : 'transparent',
-                  color: category === cat.id ? 'white' : 'oklch(0.68 0.02 285)',
+                  color: category === cat.id ? 'var(--accent-text)' : 'var(--color-text-secondary)',
                 }}
               >
                 <span>{cat.emoji}</span>
@@ -75,16 +75,16 @@ export function TemplatePicker({ onSelect, onSkip }: Props) {
 
         {/* Search */}
         <div className="relative mb-5 mx-auto max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint" />
           <input
             type="text"
             placeholder="Buscar template..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border py-2.5 pl-10 pr-4 text-sm text-white placeholder-gray-500 outline-none transition-colors focus:border-[oklch(0.58_0.24_285)]"
+            className="w-full rounded-xl border py-2.5 pl-10 pr-4 text-sm text-ink placeholder:text-faint outline-none transition-colors focus:border-[var(--accent)]"
             style={{
-              borderColor: 'oklch(1 0 0 / 12%)',
-              background: 'oklch(0.19 0.016 285)',
+              borderColor: 'var(--color-border)',
+              background: 'var(--color-surface-raised)',
             }}
           />
         </div>
@@ -96,20 +96,20 @@ export function TemplatePicker({ onSelect, onSkip }: Props) {
               key={template.id}
               type="button"
               onClick={() => onSelect(template)}
-              className="group overflow-hidden rounded-xl border p-4 text-left transition-all hover:border-[oklch(0.58_0.24_285)] hover:shadow-lg"
+              className="group overflow-hidden rounded-xl border p-4 text-left transition-all hover:border-[var(--accent)] hover:shadow-lg"
               style={{
-                borderColor: 'oklch(1 0 0 / 12%)',
-                background: 'oklch(0.19 0.016 285)',
+                borderColor: 'var(--color-border-strong)',
+                background: 'var(--color-surface-raised)',
               }}
             >
               <span className="mb-2 block text-2xl">{template.emoji}</span>
-              <span className="mb-1 block text-sm font-semibold text-white">
+              <span className="mb-1 block text-sm font-semibold text-ink">
                 {template.name}
               </span>
-              <span className="block text-xs text-gray-400">
+              <span className="block text-xs text-dim">
                 {template.description}
               </span>
-              <span className="mt-2 block text-[11px] text-gray-500">
+              <span className="mt-2 block text-[11px] text-faint">
                 {template.blocks.length} blocos
               </span>
             </button>
@@ -117,7 +117,7 @@ export function TemplatePicker({ onSelect, onSkip }: Props) {
         </div>
 
         {filtered.length === 0 && (
-          <p className="py-8 text-center text-sm text-gray-400">
+          <p className="py-8 text-center text-sm text-dim">
             Nenhum template encontrado.
           </p>
         )}
@@ -127,7 +127,7 @@ export function TemplatePicker({ onSelect, onSkip }: Props) {
           <button
             type="button"
             onClick={onSkip}
-            className="text-sm text-gray-400 underline-offset-4 hover:text-white hover:underline"
+            className="text-sm text-dim underline-offset-4 hover:text-ink hover:underline"
           >
             Começar do zero
           </button>

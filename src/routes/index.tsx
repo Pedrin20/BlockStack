@@ -18,10 +18,18 @@ const PublicProfile = lazy(() => import('../pages/PublicProfile').then(m => ({ d
 
 function PageLoader() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--color-paper)]">
+    <div
+      className="min-h-screen flex items-center justify-center"
+      style={{ background: 'var(--color-background)' }}
+    >
       <div className="flex flex-col items-center gap-3">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-[var(--color-accent)] border-t-transparent" />
-        <p className="text-sm text-[var(--color-muted)] animate-pulse">Carregando...</p>
+        <div
+          className="animate-spin rounded-full h-10 w-10 border-4"
+          style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }}
+        />
+        <p className="animate-pulse text-sm" style={{ color: 'var(--color-text-muted)' }}>
+          Carregando...
+        </p>
       </div>
     </div>
   );

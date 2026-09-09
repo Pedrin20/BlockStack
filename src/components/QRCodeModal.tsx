@@ -26,8 +26,15 @@ export function QRCodeModal ({ isOpen, onClose, url, username }: Props) {
 
 
 return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
-      <div className="bg-white rounded-[var(--radius-2xl)] p-6 max-w-sm w-full shadow-[var(--shadow-xl)] relative animate-slide-up">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+      <div
+        className="rounded-[var(--radius-2xl)] p-6 max-w-sm w-full relative animate-slide-up"
+        style={{
+          background: 'var(--color-background-elevated)',
+          border: '1px solid var(--color-border-strong)',
+          boxShadow: 'var(--shadow-xl)',
+        }}
+      >
         <button
           onClick={onClose}
           className="btn btn-ghost btn-sm absolute top-4 right-4 p-2"
@@ -36,10 +43,10 @@ return (
         </button>
 
         <div className="text-center">
-          <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">
+          <h3 className="text-xl font-bold text-ink mb-2">
             QR Code do seu perfil
           </h3>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+          <p className="text-sm text-dim mb-6">
             Escaneie com a câmera do celular para acessar seu perfil
           </p>
 
@@ -57,7 +64,7 @@ return (
             />
           </div>
 
-          <p className="text-xs text-[var(--color-text-muted)] mt-4 break-all">
+          <p className="text-xs text-faint mt-4 break-all">
             {url}
           </p>
 
@@ -72,7 +79,7 @@ return (
 
             <button
               onClick={() => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Meu perfil no GetLink: ${url}`)}`)}
-              className="btn btn-secondary btn-md w-full bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500"
+              className="btn btn-secondary btn-md w-full"
             >
               Compartilhar no WhatsApp!
             </button>

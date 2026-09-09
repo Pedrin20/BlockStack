@@ -39,20 +39,30 @@ export function Sidebar() {
         collapsed ? 'w-[68px] items-center' : 'w-60 items-stretch'
       }`}
       style={{
-        background: 'oklch(0.19 0.016 285)',
-        borderColor: 'oklch(1 0 0 / 8%)',
+        background: 'var(--color-background-elevated)',
+        borderColor: 'var(--color-border)',
       }}
     >
       {/* Logo */}
       <div className={`mb-4 flex items-center gap-2 px-4 pt-4 ${collapsed ? 'justify-center px-0' : 'px-3'}`}>
         <span
-          className="flex h-9 w-9 items-center justify-center rounded-xl text-white shrink-0"
-          style={{ background: 'oklch(0.58 0.24 285)' }}
+          className="flex h-9 w-9 items-center justify-center rounded-xl shrink-0"
+          style={{
+            background: 'var(--accent)',
+            color: 'var(--accent-text)',
+            boxShadow: 'var(--shadow-accent)',
+          }}
         >
           <Blocks className="h-5 w-5" />
         </span>
         {!collapsed && (
-          <span className="text-lg font-bold tracking-tight text-white">
+          <span
+            className="text-lg font-bold tracking-tight"
+            style={{
+              color: 'var(--color-text-primary)',
+              fontFamily: 'var(--font-display)',
+            }}
+          >
             GetLink
           </span>
         )}
@@ -70,14 +80,9 @@ export function Sidebar() {
                 collapsed ? 'justify-center' : 'justify-start'
               } ${
                 isActive
-                  ? 'text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  ? 'nav-item-active'
+                  : 'nav-item'
               }`
-            }
-            style={({ isActive }) =>
-              isActive
-                ? { background: 'oklch(0.58 0.24 285)' }
-                : undefined
             }
           >
             <item.icon className="h-5 w-5 shrink-0" />
@@ -87,8 +92,11 @@ export function Sidebar() {
       </div>
 
       {/* User info + Sair */}
-      <div className="border-t p-3" style={{ borderColor: 'oklch(1 0 0 / 8%)' }}>
-        <div className="flex items-center gap-3 rounded-lg p-2.5" style={{ background: 'oklch(0.21 0.018 285)' }}>
+      <div className="border-t p-3" style={{ borderColor: 'var(--color-border)' }}>
+        <div
+          className="flex items-center gap-3 rounded-lg p-2.5"
+          style={{ background: 'var(--color-surface-raised)' }}
+        >
           <img
             src={user?.photoURL || ''}
             alt={user?.displayName || ''}
@@ -99,16 +107,19 @@ export function Sidebar() {
           />
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-white">
+              <p className="truncate text-xs font-semibold" style={{ color: 'var(--color-text-primary)' }}>
                 {user?.displayName || user?.email?.split('@')[0] || 'Usuário'}
               </p>
-              <p className="truncate text-[11px] text-gray-400">Plano Pro</p>
+              <p className="truncate text-[11px]" style={{ color: 'var(--color-text-muted)' }}>
+                Plano Pro
+              </p>
             </div>
           )}
           <button
             onClick={handleLogout}
             title="Sair"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:text-red-400 hover:bg-white/5"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-white/5 hover:text-[var(--color-error)]"
+            style={{ color: 'var(--color-text-muted)' }}
           >
             <LogOut className="h-4 w-4" />
           </button>

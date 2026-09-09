@@ -1,5 +1,5 @@
 /* @import url() FONT IMPORTS MUST ALWAYS BE AT THE VERY TOP OF THIS FILE, ABOVE THE TAILWIND IMPORTS — DO NOT DELETE THIS COMMENT */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Share+Tech+Mono&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 
 /* CRITICAL: THE FOLLOWING TAILWIND IMPORTS MUST NEVER BE DELETED OR REORDERED — DO NOT DELETE THIS COMMENT */
 @import 'tailwindcss';
@@ -22,6 +22,8 @@
     margin: 0;
     min-height: 100vh;
     background-color: var(--color-background);
+    background-image: var(--background-glow);
+    background-attachment: fixed;
     color: var(--color-text-primary);
   }
 
@@ -41,16 +43,12 @@
   }
 
   ::selection {
-    background: var(--color-primary-muted);
+    background: var(--accent-muted);
     color: var(--color-text-primary);
   }
 
   input:focus, textarea:focus {
-    --tw-ring-color: var(--color-primary);
-  }
-
-  .transition-colors {
-    transition: background-color 0.3s ease;
+    --tw-ring-color: var(--accent);
   }
 }
 

@@ -1,17 +1,16 @@
 import { AppRoutes } from './routes'
 import { Toaster } from 'react-hot-toast'
-import { ThemeProvider } from './contexts/ThemeContext'
 
 function App() {
 
   return (
-    <ThemeProvider>
+    <>
       <Toaster
         position="top-right"
         toastOptions={{
           duration: 4000,
           style: {
-            background: 'var(--color-surface)',
+            background: 'var(--color-background-elevated)',
             color: 'var(--color-text-primary)',
             borderRadius: 'var(--radius-lg)',
             padding: '12px 16px',
@@ -33,7 +32,7 @@ function App() {
         }}
       />
       <AppRoutes />
-    </ThemeProvider>
+    </>
   )
 }
 

@@ -58,16 +58,18 @@ export function ImageUpload({ value, onChange, label }: ImageUploadProps) {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="bg-white/90 backdrop-blur-sm p-1.5 rounded-lg shadow-md hover:bg-white transition-colors"
+              className="p-1.5 rounded-lg shadow-md transition-colors"
+              style={{ background: 'var(--color-background-elevated)', color: 'var(--color-text-secondary)' }}
             >
-              <Upload size={14} className="text-gray-600" />
+              <Upload size={14} />
             </button>
             <button
               type="button"
               onClick={handleRemove}
-              className="bg-white/90 backdrop-blur-sm p-1.5 rounded-lg shadow-md hover:bg-red-50 transition-colors"
+              className="p-1.5 rounded-lg shadow-md transition-colors"
+              style={{ background: 'var(--color-background-elevated)', color: 'var(--color-error)' }}
             >
-              <X size={14} className="text-red-500" />
+              <X size={14} />
             </button>
           </div>
           {uploading && (
@@ -84,18 +86,18 @@ export function ImageUpload({ value, onChange, label }: ImageUploadProps) {
           onClick={() => fileInputRef.current?.click()}
           className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
             dragOver
-              ? 'border-[var(--color-primary)] bg-[var(--color-primary-soft)]'
-              : 'border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-soft)]'
+              ? 'border-[var(--accent)] bg-[var(--accent-soft)]'
+              : 'border-[var(--color-border-strong)] hover:border-[var(--accent)] hover:bg-[var(--accent-soft)]'
           }`}
         >
           <div className="flex flex-col items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-[var(--color-primary-soft)] flex items-center justify-center">
-              <ImageIcon size={20} className="text-[var(--color-primary)]" />
+            <div className="w-10 h-10 rounded-full bg-[var(--accent-soft)] flex items-center justify-center">
+              <ImageIcon size={20} className="text-[var(--accent-hover)]" />
             </div>
-            <p className="text-sm text-[var(--color-text-secondary)]">
+            <p className="text-sm text-dim">
               {uploading ? 'Enviando...' : 'Arraste ou clique para adicionar imagem'}
             </p>
-            <p className="text-xs text-[var(--color-text-muted)]">JPG, PNG (máx. 5MB)</p>
+            <p className="text-xs text-faint">JPG, PNG (máx. 5MB)</p>
           </div>
         </div>
       )}

@@ -43,8 +43,8 @@ export function BlockLibrary({ onAdd }: { onAdd: (def: BlockTypeDef) => void }) 
   return (
     <aside className="flex h-full w-full flex-col gap-4 overflow-y-auto p-4">
       <div>
-        <h2 className="text-sm font-semibold text-white">Adicionar bloco</h2>
-        <p className="mt-0.5 text-xs text-gray-400">Clique para inserir na sua página</p>
+        <h2 className="text-sm font-semibold text-ink">Adicionar bloco</h2>
+        <p className="mt-0.5 text-xs text-dim">Clique para inserir na sua página</p>
       </div>
       <div className="grid grid-cols-2 gap-2">
         {BLOCK_LIBRARY.map((def) => {
@@ -56,30 +56,30 @@ export function BlockLibrary({ onAdd }: { onAdd: (def: BlockTypeDef) => void }) 
               onClick={() => onAdd(def)}
               className="group relative flex flex-col gap-2 rounded-xl border p-3 text-left transition-all hover:-translate-y-0.5"
               style={{
-                borderColor: 'oklch(1 0 0 / 12%)',
-                background: 'oklch(0.21 0.018 285)',
+                borderColor: 'var(--color-border-strong)',
+                background: 'var(--color-surface-raised)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'oklch(0.58 0.24 285 / 50%)'
-                e.currentTarget.style.background = 'oklch(0.26 0.02 285)'
+                e.currentTarget.style.borderColor = 'var(--accent-muted)'
+                e.currentTarget.style.background = 'var(--color-surface-hover)'
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'oklch(1 0 0 / 12%)'
-                e.currentTarget.style.background = 'oklch(0.21 0.018 285)'
+                e.currentTarget.style.borderColor = 'var(--color-border-strong)'
+                e.currentTarget.style.background = 'var(--color-surface-raised)'
               }}
             >
               <span
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors group-hover:text-white"
-                style={{ background: 'oklch(0.26 0.02 285)' }}
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-dim transition-colors group-hover:text-ink"
+                style={{ background: 'var(--color-surface-hover)' }}
               >
                 <Icon className="h-4 w-4" />
               </span>
-              <span className="text-sm font-medium text-white">{def.label}</span>
-              <span className="text-[11px] leading-tight text-gray-400">
+              <span className="text-sm font-medium text-ink">{def.label}</span>
+              <span className="text-[11px] leading-tight text-dim">
                 {def.description}
               </span>
               <span className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
-                <Plus className="h-3.5 w-3.5" style={{ color: 'oklch(0.58 0.24 285)' }} />
+                <Plus className="h-3.5 w-3.5" style={{ color: 'var(--accent-hover)' }} />
               </span>
             </button>
           )

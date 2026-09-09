@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Download, Users } from 'lucide-react'
+import { Download, Users, Inbox, Loader2 } from 'lucide-react'
 import { MainLayout } from '../layouts/MainLayout'
+import { Card, Button, EmptyState } from '../components/ui'
 import { useAuth } from '../hooks/useAuth'
 import { subscribeToLeads, type Lead } from '../services/leadService'
 
@@ -42,23 +43,79 @@ export function Audience() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
+      <div className="animate-fade-in space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="flex items-center gap-2"><Users className="h-6 w-6 text-[var(--color-accent)]" /><h1 className="text-3xl font-bold text-[var(--color-ink)]">Audiência</h1></div>
-            <p className="mt-1 text-sm text-[var(--color-muted)]">Contatos capturados pelos seus blocos de Formulário e Newsletter.</p>
+            <div className="flex items-center gap-2">
+              <Users className="h-6 w-6" style={{ color: 'var(--accent-hover)' }} />
+              <h1 className="text-3xl font-bold" style={{ color: 'var(--color-text-primary)' }}>Audiência</h1>
+            </div>
+            <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              Contatos capturados pelos seus blocos de Formulário e Newsletter.
+            </p>
           </div>
-          <button type="button" onClick={exportCsv} disabled={!leads.length} className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50" style={{ background: 'var(--color-accent)' }}>
+          <Button onClick={exportCsv} disabled={!leads.length}>
             <Download className="h-4 w-4" /> Exportar CSV
-          </button>
+          </Button>
         </div>
 
-        <div className="rounded-2xl border border-[var(--color-border)] bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4"><h2 className="font-bold text-[var(--color-ink)]">Contatos</h2><span className="text-sm text-[var(--color-muted)]">{leads.length} {leads.length === 1 ? 'contato' : 'contatos'}</span></div>
-          {loading ? <div className="flex justify-center py-12"><div className="h-7 w-7 animate-spin rounded-full border-4 border-[var(--color-accent)] border-t-transparent" /></div> : leads.length === 0 ? <p className="py-12 text-center text-sm text-[var(--color-muted)]">Nenhum contato capturado ainda.</p> : (
-            <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b border-[var(--color-border)] text-left text-[var(--color-muted)]"><th className="px-5 py-3 font-medium">Nome</th><th className="px-5 py-3 font-medium">E-mail</th><th className="px-5 py-3 font-medium">Origem</th><th className="px-5 py-3 font-medium">Data</th></tr></thead><tbody>{leads.map((lead) => <tr key={lead.id} className="border-b border-[var(--color-border)] last:border-0"><td className="px-5 py-3 font-medium text-[var(--color-ink)]">{lead.name || '—'}</td><td className="px-5 py-3 text-[var(--color-muted)]">{lead.email}</td><td className="px-5 py-3 text-[var(--color-muted)]">{lead.source === 'newsletter' ? 'Newsletter' : 'Formulário'}</td><td className="px-5 py-3 text-[var(--color-muted)]">{formatDate(lead)}</td></tr>)}</tbody></table></div>
+        <Card className="overflow-hidden">
+          <div
+            className="flex items-center justify-between border-b px-5 py-4"
+            style={{ borderColor: 'var(--color-border)' }}
+          >
+            <h2 className="font-bold" style={{ color: 'var(--color-text-primary)' }}>Contatos</h2>
+            <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              {leads.length} {leads.length === 1 ? 'contato' : 'contatos'}
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-12">
+              <Loader2
+                className="animate-spin"
+                size={28}
+                style={{ color: 'var(--accent)' }}
+                aria-label="Carregando"
+              />
+            </div>
+          ) : leads.length === 0 ? (
+            <EmptyState
+              icon={<Inbox size={24} />}
+              title="Nenhum contato capturado ainda"
+              description="Quando alguém preencher um bloco de Formulário ou Newsletter, o contato aparece aqui."
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}>
+                    <th className="px-5 py-3 font-medium">Nome</th>
+                    <th className="px-5 py-3 font-medium">E-mail</th>
+                    <th className="px-5 py-3 font-medium">Origem</th>
+                    <th className="px-5 py-3 font-medium">Data</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leads.map((lead) => (
+                    <tr
+                      key={lead.id}
+                      className="border-b transition-colors last:border-0 hover:bg-white/5"
+                      style={{ borderColor: 'var(--color-border)' }}
+                    >
+                      <td className="px-5 py-3 font-medium" style={{ color: 'var(--color-text-primary)' }}>{lead.name || '—'}</td>
+                      <td className="px-5 py-3" style={{ color: 'var(--color-text-secondary)' }}>{lead.email}</td>
+                      <td className="px-5 py-3">
+                        <span className="badge badge-primary">{lead.source === 'newsletter' ? 'Newsletter' : 'Formulário'}</span>
+                      </td>
+                      <td className="px-5 py-3" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(lead)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
-        </div>
+        </Card>
       </div>
     </MainLayout>
   )
