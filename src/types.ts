@@ -395,6 +395,10 @@ export interface PageSettings {
   blockStyle: BlockStyle
   density: Density
   corners: CornerStyle
+  /** Quando true, a página fica acessível publicamente em /:username */
+  published?: boolean
+  /** Data/hora da última publicação (Timestamp do Firestore ou ISO em cache local) */
+  publishedAt?: any
 }
 
 export const DEFAULT_PAGE_SETTINGS: PageSettings = {
@@ -404,4 +408,6 @@ export const DEFAULT_PAGE_SETTINGS: PageSettings = {
   blockStyle: 'glass',
   density: 'standard',
   corners: 'medium',
+  published: false,
+  publishedAt: null,
 }
