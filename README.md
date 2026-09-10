@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔗 GetLink
+# 🔗 BlockStack
 
 **Transforme seu link em uma página que trabalha por você.**
 
@@ -18,7 +18,7 @@ Não é só um agregador de links — é um construtor de mini-sites por blocos,
 
 ## 📌 Sobre o projeto
 
-O **GetLink** nasceu da ideia de que uma página de perfil não precisa ser só uma lista de botões. Em vez de "aqui estão meus links", a proposta é **"aqui está tudo que eu sou, faço, vendo e quero que você faça"**.
+O **BlockStack** nasceu da ideia de que uma página de perfil não precisa ser só uma lista de botões. Em vez de "aqui estão meus links", a proposta é **"aqui está tudo que eu sou, faço, vendo e quero que você faça"**.
 
 Tudo na plataforma é um **Block**: perfil, link, produto, serviço, redes sociais, newsletter, galeria e outros — cada um reordenável, editável e estilizável de forma independente, mas seguindo um design system único e consistente.
 
@@ -60,8 +60,8 @@ Tudo na plataforma é um **Block**: perfil, link, produto, serviço, redes socia
 ### 1. Clone o repositório
 
 ```bash
-git clone https://github.com/seu-usuario/getlink.git
-cd getlink
+git clone https://github.com/Pedrin20/blockstack.git
+cd blockstack
 ```
 
 ### 2. Instale as dependências
@@ -141,7 +141,7 @@ Distribuído sob a licença MIT. Veja `LICENSE` para mais informações.
 
 ## 👤 Autor
 
-Feito por **[Pedro]** — [GitHub](https://github.com/seu-usuario) · [LinkedIn](https://linkedin.com/in/seu-usuario)
+Feito por **[Pedro]** — github.com/Pedrin20 · https://www.linkedin.com/in/pedro-henrique-alves-lessa-6920172aa/
 
 ---
 
