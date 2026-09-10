@@ -9,7 +9,6 @@ import {
   Users,
   DollarSign,
   Settings,
-  Blocks,
   LogOut,
 } from 'lucide-react'
 
@@ -43,29 +42,13 @@ export function Sidebar() {
         borderColor: 'var(--color-border)',
       }}
     >
-      {/* Logo */}
-      <div className={`mb-4 flex items-center gap-2 px-4 pt-4 ${collapsed ? 'justify-center px-0' : 'px-3'}`}>
-        <span
-          className="flex h-9 w-9 items-center justify-center rounded-xl shrink-0"
-          style={{
-            background: 'var(--accent)',
-            color: 'var(--accent-text)',
-            boxShadow: 'var(--shadow-accent)',
-          }}
-        >
-          <Blocks className="h-5 w-5" />
-        </span>
-        {!collapsed && (
-          <span
-            className="text-lg font-bold tracking-tight"
-            style={{
-              color: 'var(--color-text-primary)',
-              fontFamily: 'var(--font-display)',
-            }}
-          >
-            GetLink
-          </span>
-        )}
+      {/* Marca */}
+      <div className={`mb-4 flex items-center px-4 pt-4 ${collapsed ? 'justify-center px-0' : 'px-3'}`}>
+        <img
+          src={collapsed ? '/brand/mark.svg' : '/brand/wordmark-dark-bg.svg'}
+          alt="BlockStack"
+          className={collapsed ? 'h-9 w-9' : 'h-10 w-auto max-w-full'}
+        />
       </div>
 
       {/* Navigation */}

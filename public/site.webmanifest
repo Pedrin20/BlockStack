@@ -1,0 +1,22 @@
+{
+  "name": "BlockStack",
+  "short_name": "BlockStack",
+  "description": "Sua página de links com a identidade BlockStack.",
+  "icons": [
+    {
+      "src": "/brand/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "theme_color": "#0B0A12",
+  "background_color": "#0B0A12",
+  "display": "standalone"
+}

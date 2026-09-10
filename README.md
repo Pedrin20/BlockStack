@@ -38,7 +38,7 @@ Tudo na plataforma é um **Block**: perfil, link, produto, serviço, redes socia
 - 🧩 Templates prontos por objetivo (conseguir clientes, vender produtos, portfólio...) e por profissão
 - 🎯 Smart Blocks — conteúdo condicional por origem de tráfego (Instagram, YouTube, LinkedIn, etc.)
 - ⏰ Agendamento e expiração de blocos/links
-- 🤖 GetLink AI — diagnóstico automático de otimização da página (observa → recomenda → aplica)
+- 🤖 BlockStack AI — diagnóstico automático de otimização da página (observa → recomenda → aplica)
 - 🧪 A/B Testing de blocos
 - 💰 Monetização — produtos digitais, agendamento pago, domínio customizado, API pública
 
@@ -102,7 +102,7 @@ A aplicação estará disponível em `http://localhost:5173`.
 ## 📂 Estrutura do projeto
 
 ```
-getlink/
+blockstack/
 ├── src/
 │   ├── components/       # Componentes compartilhados (Card, Button, Input, EmptyState...)
 │   ├── blocks/           # Tipos de bloco (Link, Produto, Serviço, Redes sociais, etc.)
@@ -120,7 +120,7 @@ getlink/
 
 ## 🎨 Design System
 
-O GetLink segue um design system único em todo o produto (dashboard e página pública), baseado em:
+O BlockStack segue um design system único em todo o produto (dashboard e página pública), baseado em:
 - **Tema escuro** como identidade padrão, com suporte a múltiplos presets
 - **Tokens centralizados** via CSS variables (cor de destaque, radius, tipografia, sombras)
 - **Componentes de bloco reutilizáveis** entre o editor e a renderização pública

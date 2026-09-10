@@ -78,7 +78,7 @@ return (
             </button>
 
             <button
-              onClick={() => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Meu perfil no GetLink: ${url}`)}`)}
+              onClick={() => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Meu perfil no BlockStack: ${url}`)}`)}
               className="btn btn-secondary btn-md w-full"
             >
               Compartilhar no WhatsApp!

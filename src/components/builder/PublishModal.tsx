@@ -88,7 +88,7 @@ export function PublishModal({ isOpen, onClose, userId, username, published, onC
   }
 
   const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(
-    `Acesse minha página no GetLink: ${publicUrl}`,
+    `Acesse minha página no BlockStack: ${publicUrl}`,
   )}`
 
   return (

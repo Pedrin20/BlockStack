@@ -31,7 +31,7 @@ export type LinkInput = Omit<Link, 'id' | 'createdAt' | 'clicks' | 'order'>
 export type LinkWithId = Required<Pick<Link, 'id' | 'title' | 'url' | 'userId'>> & Omit<Link, 'id' | 'title' | 'url' | 'userId'>
 
 /* ═══════════════════════════════════════════════════════════════
-   BLOCK SYSTEM — GetLink Style
+   BLOCK SYSTEM — BlockStack Style
    ═══════════════════════════════════════════════════════════════ */
 
 export type BlockType =

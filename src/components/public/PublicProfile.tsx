@@ -278,7 +278,7 @@ export function PublicProfile({
           ))}
         </div>
         <p className="mt-8 text-center text-xs" style={mutedStyle()}>
-          Feito com GetLink
+          Feito com BlockStack
         </p>
       </div>
     </div>

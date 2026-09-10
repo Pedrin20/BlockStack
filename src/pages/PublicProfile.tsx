@@ -96,9 +96,9 @@ export function PublicProfile() {
   const headerBlock = blocks.find((b) => b.type === 'header')
   const headerData = headerBlock?.data as any
   const title = headerData?.displayName
-    ? `${headerData.displayName} | GetLink`
-    : `${profile.displayName} | GetLink`
-  const description = headerData?.bio || profile.bio || `${profile.displayName} está no GetLink!`
+    ? `${headerData.displayName} | BlockStack`
+    : `${profile.displayName} | BlockStack`
+  const description = headerData?.bio || profile.bio || `${profile.displayName} está no BlockStack!`
   const imageUrl = headerData?.avatarUrl || profile.avatarUrl || `${siteUrl}/default-og-image.png`
 
   // Tokens do tema escolhido na tela Design (fonte única: lib/publicPresets).
