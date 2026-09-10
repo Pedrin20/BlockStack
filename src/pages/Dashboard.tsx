@@ -1,5 +1,5 @@
 import { useAuth } from '../hooks/useAuth'
-import { useBlocks } from '../hooks/useBlocks'
+import { useBlocks, usePageSettings } from '../hooks/useBlocks'
 import { useUserProfile } from '../hooks/useUserProfile'
 import { MainLayout } from '../layouts/MainLayout'
 import { Card, Button, EmptyState, PageLoading } from '../components/ui'
@@ -39,6 +39,7 @@ export function Dashboard() {
   const { user } = useAuth()
   const { blocks, loading } = useBlocks(user?.uid)
   const { profile: currentProfile, loading: profileLoading } = useUserProfile(user?.uid)
+  const { settings } = usePageSettings(user?.uid)
   const navigate = useNavigate()
 
   const totalBlocks = blocks.length
@@ -75,7 +76,7 @@ export function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <StatCard icon={LayoutGrid} label="Total de blocos" value={totalBlocks} />
           <StatCard icon={TrendingUp} label="Tipos de blocos" value={blockTypes} />
-          <StatCard icon={Eye} label="Pagina publica" value={currentProfile?.username ? 'Ativa' : 'Inativa'} />
+          <StatCard icon={Eye} label="Pagina publica" value={settings?.published ? 'Publicada' : 'Não publicada'} />
         </div>
 
         {/* Quick actions */}
@@ -96,7 +97,7 @@ export function Dashboard() {
             {currentProfile?.username && (
               <Button variant="secondary" onClick={() => navigate('/' + currentProfile.username)}>
                 <Eye size={18} />
-                Ver perfil público
+                {settings?.published ? 'Ver perfil público' : 'Prévia da página'}
               </Button>
             )}
 

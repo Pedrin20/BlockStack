@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Block, BlockType, BlockTypeDef } from '../../types'
 import type { Template } from '../../lib/templates'
-import { useBlocks } from '../../hooks/useBlocks'
+import { useBlocks, usePageSettings } from '../../hooks/useBlocks'
 import { BlockLibrary } from './BlockLibrary'
 import { TemplatePicker } from './TemplatePicker'
 import { BlockCard } from './BlockCard'
 import { PropertiesPanel } from './PropertiesPanel'
+import { PreviewModal } from './PreviewModal'
+import { PublishModal } from './PublishModal'
 import { PageLoading } from '../ui'
-import { Monitor, Smartphone, Eye, Share2, Sparkles, ArrowLeft, LayoutGrid, QrCode } from 'lucide-react'
+import { Monitor, Smartphone, Eye, Share2, Sparkles, ArrowLeft, LayoutGrid, QrCode, Check, Globe } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { useUserProfile } from '../../hooks/useUserProfile'
@@ -20,11 +22,14 @@ function cn(...classes: (string | false | null | undefined)[]) {
 export function PageBuilder({ userId }: { userId: string }) {
   const { blocks, loading, addBlock, addBlocks, removeBlock, updateBlock, reorder } = useBlocks(userId)
   const { profile } = useUserProfile(userId)
+  const { settings, reload: reloadSettings } = usePageSettings(userId)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const navigate = useNavigate()
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop')
   const [showPicker, setShowPicker] = useState(true)
   const [showQrCode, setShowQrCode] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+  const [showPublish, setShowPublish] = useState(false)
   const dragIndex = useRef<number | null>(null)
 
   // Relógio para refletir status de agendamento no canvas do editor
@@ -36,6 +41,7 @@ export function PageBuilder({ userId }: { userId: string }) {
 
   const selected = blocks.find((b) => b.id === selectedId) ?? null
   const publicUrl = profile?.username ? `${window.location.origin}/${profile.username}` : ''
+  const isPublished = settings?.published === true
 
   function getDefaultData(type: BlockType): any {
     const defaults: Record<BlockType, any> = {
@@ -166,9 +172,15 @@ export function PageBuilder({ userId }: { userId: string }) {
             <h1 className="text-lg font-bold tracking-tight text-ink">
               Minha Página
             </h1>
-            <p className="hidden text-xs text-dim sm:block">
-              {profile?.username ? `${window.location.host}/${profile.username}` : 'Defina seu username para publicar'}
-            </p>
+            {profile?.username ? (
+              <p className="hidden items-center gap-1.5 text-xs text-dim sm:flex">
+                <span className={`inline-block h-1.5 w-1.5 rounded-full ${isPublished ? 'bg-green-500' : 'bg-amber-500'}`} />
+                {window.location.host}/{profile.username}
+                <span className="text-faint">· {isPublished ? 'Publicada' : 'Não publicada'}</span>
+              </p>
+            ) : (
+              <p className="hidden text-xs text-dim sm:block">Defina seu username para publicar</p>
+            )}
           </div>
         </div>
 
@@ -219,10 +231,12 @@ export function PageBuilder({ userId }: { userId: string }) {
           </button>
           <button
             type="button"
-            className="btn btn-secondary btn-sm hidden sm:flex"
+            onClick={() => setShowPreview(true)}
+            className="btn btn-secondary btn-sm flex"
+            title="Prévia da página pública"
           >
             <Eye className="h-4 w-4" />
-            Prévia
+            <span className="hidden sm:inline">Prévia</span>
           </button>
           <button
             type="button"
@@ -234,10 +248,22 @@ export function PageBuilder({ userId }: { userId: string }) {
           </button>
           <button
             type="button"
-            className="btn btn-primary btn-sm"
+            disabled={!publicUrl}
+            onClick={() => setShowPublish(true)}
+            className={isPublished ? 'btn btn-secondary btn-sm' : 'btn btn-primary btn-sm'}
+            title={isPublished ? 'Gerenciar publicação' : 'Publicar sua página'}
           >
-            <Share2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Publicar</span>
+            {isPublished ? (
+              <>
+                <Check className="h-4 w-4 text-green-500" />
+                <span className="hidden sm:inline">Publicado</span>
+              </>
+            ) : (
+              <>
+                {!publicUrl ? <Globe className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+                <span className="hidden sm:inline">Publicar</span>
+              </>
+            )}
           </button>
         </div>
       </header>
@@ -323,6 +349,21 @@ export function PageBuilder({ userId }: { userId: string }) {
         </div>
       </div>
       {publicUrl && profile?.username ? <QRCodeModal isOpen={showQrCode} onClose={() => setShowQrCode(false)} url={publicUrl} username={profile.username} /> : null}
+      <PreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        blocks={blocks}
+        settings={settings}
+        username={profile?.username}
+      />
+      <PublishModal
+        isOpen={showPublish}
+        onClose={() => setShowPublish(false)}
+        userId={userId}
+        username={profile?.username}
+        published={isPublished}
+        onChanged={reloadSettings}
+      />
     </div>
   )
 }

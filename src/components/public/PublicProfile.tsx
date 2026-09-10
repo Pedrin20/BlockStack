@@ -201,10 +201,13 @@ export function PublicProfile({
   blocks,
   theme,
   className,
+  preview = false,
 }: {
   blocks: Block[]
   theme: PublicProfileTheme
   className?: string
+  /** Modo de prévia dentro do editor: não conta views/cliques e não navega. */
+  preview?: boolean
 }) {
   const density = DENSITY_CONFIG[theme.density] || DENSITY_CONFIG.standard
 
@@ -222,7 +225,9 @@ export function PublicProfile({
 
   // Count one view per browser session for this profile. It avoids inflating the
   // dashboard when React remounts the public page during development.
+  // Prévias do próprio dono (preview === true) nunca contam analytics.
   useEffect(() => {
+    if (preview) return
     const userId = blocks[0]?.userId
     if (!userId || resolved.length === 0) return
 
@@ -233,12 +238,15 @@ export function PublicProfile({
     void recordProfileView(userId, resolved.map((item) => item.block.id)).catch(() => {
       // Analytics must never interfere with viewing a public profile.
     })
-  }, [blocks, resolved])
+  }, [blocks, resolved, preview])
 
   return (
     <div
       className={`gl-public min-h-full w-full px-4 py-8 sm:px-6 ${className || ''}`}
-      style={{ background: theme.vars.bg, ...themeToCssVars(theme) }}
+      style={{ background: theme.vars.bg, ...themeToCssVars(theme), ...(preview ? { cursor: 'default' } : {}) }}
+      // Na prévia, bloqueia qualquer navegação/envio vindo dos blocos
+      onClickCapture={preview ? (e) => e.preventDefault() : undefined}
+      onSubmitCapture={preview ? (e) => e.preventDefault() : undefined}
     >
       {/* Estados de foco/hover dos elementos interativos da página pública,
           sempre derivados dos tokens do tema */}
@@ -265,6 +273,7 @@ export function PublicProfile({
               mode={r.mode}
               clickUrl={r.clickUrl}
               substitute={r.substitute}
+              preview={preview}
             />
           ))}
         </div>
@@ -282,12 +291,14 @@ function ThemedBlock({
   mode = 'normal',
   clickUrl,
   substitute,
+  preview = false,
 }: {
   block: Block
   theme: PublicProfileTheme
   mode?: ResolvedBlockMode
   clickUrl?: string
   substitute?: SubstituteContent
+  preview?: boolean
 }) {
   const content =
     mode === 'substitute' ? (
@@ -308,7 +319,9 @@ function ThemedBlock({
   const normalizedHref = href ? normalizeUrl(href) : undefined
   const wrapperClass = `flex flex-col overflow-hidden p-4 ${SIZE_CLASSES[block.size]}`
 
-  if (normalizedHref) {
+  // Na prévia do editor, blocos clicáveis viram divisores simples: sem âncora,
+  // sem navegação e sem registrar cliques.
+  if (normalizedHref && !preview) {
     return (
       <a
         href={normalizedHref}
@@ -326,7 +339,10 @@ function ThemedBlock({
   }
 
   return (
-    <div className={wrapperClass} style={surfaceStyle(theme)}>
+    <div
+      className={`${wrapperClass}${normalizedHref ? ' transition-transform duration-200' : ''}`}
+      style={surfaceStyle(theme)}
+    >
       {content}
     </div>
   )

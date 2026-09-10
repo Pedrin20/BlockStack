@@ -11,6 +11,7 @@ import {
 import {
   subscribeToPageSettings,
   savePageSettings as savePageSettingsService,
+  getPageSettings,
 } from '../services/settingsService'
 
 export function useBlocks(userId?: string) {
@@ -103,5 +104,13 @@ export function usePageSettings(userId?: string) {
     await savePageSettingsService(userId, newSettings)
   }, [userId])
 
-  return { settings, loading, saveSettings }
+  // Recarrega as settings direto da fonte (útil após publicar/despublicar,
+  // principalmente no caminho de fallback via localStorage).
+  const reload = useCallback(async () => {
+    if (!userId) return
+    const fresh = await getPageSettings(userId)
+    setSettings(fresh)
+  }, [userId])
+
+  return { settings, loading, saveSettings, reload }
 }

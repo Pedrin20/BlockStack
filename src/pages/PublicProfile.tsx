@@ -1,16 +1,43 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
+import { Lock } from 'lucide-react'
 import { useUserProfile } from '../hooks/useUserProfile'
+import { useAuth } from '../hooks/useAuth'
 import { fetchUserBlocks, fetchPageSettings } from '../services/blockService'
 import type { Block, PageSettings } from '../types'
 import { DEFAULT_PAGE_SETTINGS } from '../types'
 import { PublicProfile as PublicProfileComponent } from '../components/public/PublicProfile'
 import { getFontFamily, getPresetVars, getRadius } from '../lib/publicPresets'
 
+function ProfileOfflineScreen() {
+  return (
+    <div
+      className="flex min-h-screen items-center justify-center px-4"
+      style={{ background: 'var(--color-background)', color: 'var(--color-text-secondary)' }}
+    >
+      <div className="w-full max-w-md rounded-2xl p-8 text-center" style={{ border: '1px solid var(--color-border)', background: 'var(--color-surface)' }}>
+        <div
+          className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full"
+          style={{ background: 'var(--accent-soft)' }}
+        >
+          <Lock size={24} style={{ color: 'var(--accent-hover)' }} />
+        </div>
+        <h1 className="mb-2 text-xl font-bold" style={{ color: 'var(--color-text-primary)' }}>
+          Página não publicada
+        </h1>
+        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          Esta página ainda não está disponível. O dono pode estar editando ou ainda não a publicou.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function PublicProfile() {
   const { username } = useParams<{ username: string }>()
   const { profile, loading: profileLoading, error } = useUserProfile(undefined, username)
+  const { user, loading: authLoading } = useAuth()
   const [blocks, setBlocks] = useState<Block[]>([])
   const [pageSettings, setPageSettings] = useState<PageSettings>(DEFAULT_PAGE_SETTINGS)
   const [blocksLoading, setBlocksLoading] = useState(false)
@@ -31,7 +58,7 @@ export function PublicProfile() {
     }).catch(() => setBlocksLoading(false))
   }, [profile?.id])
 
-  if (profileLoading || blocksLoading) {
+  if (profileLoading || blocksLoading || authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--color-background)' }}>
         <div
@@ -56,6 +83,14 @@ export function PublicProfile() {
     )
   }
 
+  const isOwner = user?.uid === profile.id
+  const isPublished = pageSettings.published === true
+
+  // Página despublicada: só o dono pode enxergá-la (em modo de prévia).
+  if (!isPublished && !isOwner) {
+    return <ProfileOfflineScreen />
+  }
+
   const siteUrl = window.location.origin
   const profileUrl = `${siteUrl}/${profile.username}`
   const headerBlock = blocks.find((b) => b.type === 'header')
@@ -78,6 +113,7 @@ export function PublicProfile() {
     <>
       <Helmet>
         <title>{title}</title>
+        {!isPublished && <meta name="robots" content="noindex, nofollow" />}
         <meta name="description" content={description} />
         <meta property="og:type" content="profile" />
         <meta property="og:url" content={profileUrl} />
@@ -94,6 +130,17 @@ export function PublicProfile() {
         <link rel="canonical" href={profileUrl} />
       </Helmet>
 
+      {/* Aviso para o dono vendo a própria página ainda despublicada */}
+      {!isPublished && isOwner && (
+        <div
+          className="flex items-center justify-center gap-2 px-4 py-2 text-center text-xs font-medium"
+          style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
+        >
+          <Lock size={13} />
+          Prévia privada — sua página ainda não foi publicada. Outras pessoas veem um aviso de página indisponível.
+        </div>
+      )}
+
       <PublicProfileComponent
         blocks={blocks}
         theme={{
@@ -103,6 +150,7 @@ export function PublicProfile() {
           radius: getRadius(pageSettings.corners),
           fontDisplay: getFontFamily(pageSettings.titleFont),
         }}
+        preview={!isPublished && isOwner}
       />
     </>
   )
