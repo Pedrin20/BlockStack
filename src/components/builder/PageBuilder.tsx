@@ -50,7 +50,7 @@ export function PageBuilder({ userId }: { userId: string }) {
       product: { title: 'Novo produto', description: 'Descrição curta', imageUrl: '', price: '0', linkUrl: '' },
       service: { title: 'Novo serviço', description: 'Descrição', actionLabel: 'Agendar', actionUrl: '' },
       gallery: { images: [] },
-      video: { title: 'Vídeo', embedUrl: '' },
+      video: { title: 'Vídeo', embedUrl: '', sourceUrl: '' },
       text: { content: 'Seu texto aqui' },
       newsletter: { title: 'Assine minha lista', description: 'Novidades no seu e-mail', placeholder: 'seu@email.com', buttonText: 'Assinar' },
       socials: { items: [{ platform: 'instagram', url: '' }] },

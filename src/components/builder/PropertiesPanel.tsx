@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { Timestamp } from 'firebase/firestore'
 import {
   type Block,
@@ -12,6 +13,15 @@ import {
   TRAFFIC_SOURCE_LABELS,
 } from '../../types'
 import { Trash2, MousePointerClick, CalendarClock, Sparkles } from 'lucide-react'
+import {
+  VideoSection,
+  GitHubSection,
+  SpotifySection,
+  GallerySection,
+  FormSection,
+  NewsletterSection,
+  FaqSection,
+} from './BlockEditorSections'
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -60,9 +70,20 @@ export function PropertiesPanel({
   const def = BLOCK_LIBRARY.find((d) => d.type === block.type)
   const allowedSizes = def?.allowedSizes ?? ['1x1', '2x1', '2x2', 'full']
   const d = block.data as any
+  // Ref dos dados: callbacks assíncronos (ex: resolução de integração que
+  // termina depois de o usuário editar outro campo) precisam fazer merge
+  // contra os dados MAIS RECENTES, não contra a closure do render em que
+  // foram criados.
+  const latestDataRef = useRef<any>(d)
+  latestDataRef.current = d
 
   function updateData(field: string, value: any) {
     onChange({ data: { ...d, [field]: value } } as any)
+  }
+
+  /** Patch parcial nos dados do bloco — usado pelas seções específicas de cada tipo. */
+  function patchData(patch: Record<string, unknown>) {
+    onChange({ data: { ...latestDataRef.current, ...patch } } as any)
   }
 
   return (
@@ -161,17 +182,23 @@ export function PropertiesPanel({
         </Field>
       ) : null}
 
-      {block.type === 'video' ? (
-        <Field label="URL de embed">
-          <input
-            value={d.embedUrl || ''}
-            onChange={(e) => updateData('embedUrl', e.target.value)}
-            className={`w-full rounded-lg px-3 py-2 text-sm text-ink outline-none transition-colors ${focusStyle}`}
-            style={{ ...inputStyle, borderColor: 'var(--color-border)', background: 'var(--color-background-elevated)' }}
-            placeholder="https://www.youtube.com/embed/..."
-          />
-        </Field>
+      {/* Conteúdo real por tipo — integrações resolvem no editor e o snapshot
+          é salvo no bloco; a página pública apenas exibe o que foi salvo. */}
+      {block.type === 'video' || block.type === 'youtube' ? (
+        <VideoSection data={d} blockId={block.id} onChange={patchData} />
       ) : null}
+
+      {block.type === 'github' ? <GitHubSection data={d} blockId={block.id} onChange={patchData} /> : null}
+
+      {block.type === 'spotify' ? <SpotifySection data={d} blockId={block.id} onChange={patchData} /> : null}
+
+      {block.type === 'gallery' ? <GallerySection data={d} onChange={patchData} /> : null}
+
+      {block.type === 'form' ? <FormSection data={d} onChange={patchData} /> : null}
+
+      {block.type === 'newsletter' ? <NewsletterSection data={d} onChange={patchData} /> : null}
+
+      {block.type === 'faq' ? <FaqSection data={d} onChange={patchData} /> : null}
 
       {/* Scheduling — apenas blocos link / produto / serviço */}
       {['link', 'product', 'service'].includes(block.type) ? (

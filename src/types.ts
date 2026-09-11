@@ -144,9 +144,33 @@ export interface GalleryBlockData {
   images: { url: string; caption?: string }[]
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   SNAPSHOTS DE INTEGRAÇÕES — resolvidos no editor via serviços
+   externos (oEmbed / API pública) e salvos junto ao bloco. A página
+   pública NUNCA refaz essas chamadas: apenas exibe o snapshot.
+   ═══════════════════════════════════════════════════════════════ */
+
+export type VideoProvider = 'youtube' | 'vimeo'
+
+/** Resultado do oEmbed de YouTube/Vimeo resolvido no editor. */
+export interface ResolvedVideoMeta {
+  provider: VideoProvider
+  videoId: string
+  title?: string
+  authorName?: string
+  thumbnailUrl?: string
+  embedUrl: string
+  /** ISO date — permite ao editor sugerir "Atualizar dados" */
+  resolvedAt?: string
+}
+
 export interface VideoBlockData {
   title: string
   embedUrl: string
+  /** URL original colada pelo usuário (watch link, youtu.be etc.) */
+  sourceUrl?: string
+  /** Snapshot do oEmbed — ausente = fallback gracioso (sem thumbnail) */
+  resolved?: ResolvedVideoMeta | null
 }
 
 export interface TextBlockData {
@@ -165,19 +189,55 @@ export interface SocialsBlockData {
 }
 
 
+/** Snapshot do perfil GitHub (API pública) resolvido no editor. */
+export interface GitHubProfileSnapshot {
+  login: string
+  name?: string
+  bio?: string
+  avatarUrl?: string
+  profileUrl: string
+  publicRepos: number
+  /** Linguagens mais usadas (contagem ponderada por estrelas) */
+  topLanguages?: { name: string; count: number }[]
+  resolvedAt?: string
+}
+
 export interface GitHubBlockData {
   username: string
   showPinned: boolean
+  /** Snapshot resolvido no editor — página pública não chama a API */
+  profile?: GitHubProfileSnapshot | null
+}
+
+export type SpotifyKind = 'track' | 'album' | 'playlist' | 'artist' | 'show' | 'episode'
+
+/** Snapshot do oEmbed do Spotify (+ meta do embed) resolvido no editor. */
+export interface SpotifyResolvedMeta {
+  kind: SpotifyKind
+  id: string
+  title?: string
+  /** Artista (track/album) ou dono (playlist/artist) */
+  owner?: string
+  thumbnailUrl?: string
+  embedUrl?: string
+  sourceUrl?: string
+  resolvedAt?: string
 }
 
 export interface SpotifyBlockData {
   uri: string
-  variant: 'track' | 'playlist' | 'album'
+  variant: SpotifyKind
+  /** Snapshot resolvido no editor — página pública não refaz oEmbed */
+  resolved?: SpotifyResolvedMeta | null
+  /** Quando true, a página pública renderiza o player compacto direto */
+  autoplayEmbed?: boolean
 }
 
 export interface YouTubeBlockData {
   videoUrl: string
   title: string
+  /** Snapshot do oEmbed — ausente = fallback (thumbnail derivada do ID) */
+  resolved?: ResolvedVideoMeta | null
 }
 
 export interface CalendarBlockData {

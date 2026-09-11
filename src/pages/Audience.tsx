@@ -29,8 +29,14 @@ export function Audience() {
 
   function exportCsv() {
     const rows = [
-      ['Nome', 'E-mail', 'Origem', 'Data'],
-      ...leads.map((lead) => [lead.name, lead.email, lead.source === 'newsletter' ? 'Newsletter' : 'Formulário', formatDate(lead)]),
+      ['Nome', 'E-mail', 'Origem', 'Mensagem', 'Data'],
+      ...leads.map((lead) => [
+        lead.name,
+        lead.email,
+        lead.sourceLabel || (lead.source === 'newsletter' ? 'Newsletter' : 'Formulário'),
+        lead.message || '',
+        formatDate(lead),
+      ]),
     ]
     const csv = `\uFEFF${rows.map((row) => row.map(csvValue).join(',')).join('\r\n')}`
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
@@ -93,6 +99,7 @@ export function Audience() {
                     <th className="px-5 py-3 font-medium">Nome</th>
                     <th className="px-5 py-3 font-medium">E-mail</th>
                     <th className="px-5 py-3 font-medium">Origem</th>
+                    <th className="px-5 py-3 font-medium">Mensagem</th>
                     <th className="px-5 py-3 font-medium">Data</th>
                   </tr>
                 </thead>
@@ -106,7 +113,12 @@ export function Audience() {
                       <td className="px-5 py-3 font-medium" style={{ color: 'var(--color-text-primary)' }}>{lead.name || '—'}</td>
                       <td className="px-5 py-3" style={{ color: 'var(--color-text-secondary)' }}>{lead.email}</td>
                       <td className="px-5 py-3">
-                        <span className="badge badge-primary">{lead.source === 'newsletter' ? 'Newsletter' : 'Formulário'}</span>
+                        <span className="badge badge-primary">
+                          {lead.sourceLabel || (lead.source === 'newsletter' ? 'Newsletter' : 'Formulário')}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 max-w-[220px] truncate" title={lead.message || ''} style={{ color: 'var(--color-text-secondary)' }}>
+                        {lead.message || '—'}
                       </td>
                       <td className="px-5 py-3" style={{ color: 'var(--color-text-secondary)' }}>{formatDate(lead)}</td>
                     </tr>

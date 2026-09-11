@@ -1,5 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { Block, BlockSize, Density, BlockStyle, SubstituteContent } from '../../types'
+import { createPortal } from 'react-dom'
+import type {
+  Block,
+  BlockSize,
+  Density,
+  BlockStyle,
+  SubstituteContent,
+  ResolvedVideoMeta,
+  SpotifyResolvedMeta,
+  SpotifyBlockData,
+} from '../../types'
+import { extractVideoThumbnail, toVideoEmbedUrl } from '../../utils/videoThumbnails'
 import { getBlockPrimaryUrl, normalizeUrl, resolvePublicBlocks, type ResolvedBlockMode } from '../../utils/schedule'
 import { applySmartVariation, getTrafficSource } from '../../utils/smartBlocks'
 import { recordBlockClick, recordProfileView } from '../../services/analyticsService'
@@ -20,7 +31,10 @@ import {
   MessageSquare,
   HelpCircle,
   ChevronDown,
-  Quote
+  ChevronLeft,
+  ChevronRight,
+  Quote,
+  X
 } from 'lucide-react'
 
 interface PublicProfileTheme {
@@ -184,19 +198,6 @@ function PagePlaceholder({ icon }: { icon: React.ReactNode }) {
   )
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   THUMBNAIL DE VÍDEO — derivada da URL de embed quando possível.
-   ═══════════════════════════════════════════════════════════════ */
-
-function extractVideoThumbnail(embedUrl: string): string | null {
-  if (!embedUrl) return null
-  const yt = embedUrl.match(/(?:youtube\.com\/(?:embed\/|watch\?v=|shorts\/)|youtu\.be\/)([\w-]{6,})/)
-  if (yt) return `https://i.ytimg.com/vi/${yt[1]}/hqdefault.jpg`
-  const vimeo = embedUrl.match(/vimeo\.com\/(?:video\/)?(\d+)/)
-  if (vimeo) return `https://vumbnail.com/${vimeo[1]}.jpg`
-  return null
-}
-
 export function PublicProfile({
   blocks,
   theme,
@@ -304,7 +305,7 @@ function ThemedBlock({
     mode === 'substitute' ? (
       <SubstituteBody substitute={substitute} />
     ) : (
-      <ThemedBody block={block} />
+      <ThemedBody block={block} preview={preview} />
     )
 
   // Link / produto / serviço abrem sua URL primária; o modo redirect usa a URL
@@ -383,7 +384,7 @@ function SubstituteBody({
   )
 }
 
-function ThemedBody({ block }: { block: Block }) {
+function ThemedBody({ block, preview = false }: { block: Block; preview?: boolean }) {
   const d = block.data as any
 
   switch (block.type) {
@@ -484,19 +485,13 @@ function ThemedBody({ block }: { block: Block }) {
       )
 
     case 'newsletter':
-      return <LeadCapture block={block} source="newsletter" title={d.title || 'Newsletter'} description={d.description} buttonText={d.buttonText || 'Assinar'} emailPlaceholder={d.placeholder || 'seu@email.com'} />
+      return <LeadCapture block={block} source="newsletter" title={d.title || 'Newsletter'} description={d.description} buttonText={d.buttonText || 'Assinar'} emailPlaceholder={d.placeholder || 'seu@email.com'} preview={preview} />
 
     case 'gallery':
-      return (
-        <div className="grid h-full w-full grid-cols-2 gap-2">
-          {[0, 1, 2, 3].map((i) => (
-            <PagePlaceholder key={i} icon={<ImageIcon className="h-5 w-5" />} />
-          ))}
-        </div>
-      )
+      return <GalleryFace images={d.images || []} />
 
     case 'video':
-      return <VideoFace title={d.title || 'Vídeo'} embedUrl={d.embedUrl} />
+      return <VideoFace title={d.title || 'Vídeo'} embedUrl={d.embedUrl} resolved={d.resolved} />
 
     case 'text':
       return (
@@ -531,51 +526,84 @@ function ThemedBody({ block }: { block: Block }) {
       )
 
     case 'github': {
-      const profileUrl = d.username ? `https://github.com/${d.username}` : undefined
+      const profile = d.profile || null
+      const profileUrl = (profile?.profileUrl as string) || (d.username ? `https://github.com/${d.username}` : undefined)
+      const name = profile?.name || (d.username ? `@${d.username}` : 'GitHub')
       return (
         <div className="flex h-full w-full flex-col justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Code2 className="h-5 w-5" style={{ color: 'var(--pv-accent)' }} />
-            <h3 className="truncate font-semibold" style={displayStyle()}>
-              {d.username ? `@${d.username}` : 'GitHub'}
+            {profile?.avatarUrl ? (
+              <img
+                src={profile.avatarUrl}
+                alt={profile.login || d.username}
+                className="h-9 w-9 shrink-0 rounded-full object-cover"
+                style={{ boxShadow: '0 0 0 2px var(--pv-accent)' }}
+                onError={(e) => {
+                  ;(e.target as HTMLImageElement).style.display = 'none'
+                }}
+              />
+            ) : (
+              <Code2 className="h-5 w-5 shrink-0" style={{ color: 'var(--pv-accent)' }} />
+            )}
+            <h3 className="min-w-0 truncate font-semibold" style={displayStyle()}>
+              {name}
             </h3>
           </div>
-          <p className="text-xs leading-relaxed" style={mutedStyle()}>
-            Projetos, contribuições e estatísticas open source.
-          </p>
-          <ActionPill href={profileUrl ? normalizeUrl(profileUrl) : undefined}>
-            Ver perfil no GitHub <ArrowUpRight className="h-3.5 w-3.5" />
-          </ActionPill>
+          {profile ? (
+            <>
+              {profile.bio ? (
+                <p className="text-xs leading-relaxed line-clamp-2" style={mutedStyle()}>
+                  {profile.bio}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span
+                  className="px-2 py-0.5 text-[11px] font-semibold"
+                  style={{
+                    borderRadius: 'calc(var(--pv-radius) * 0.6)',
+                    background: 'color-mix(in srgb, var(--pv-accent) 16%, transparent)',
+                    color: 'var(--pv-accent)',
+                  }}
+                >
+                  {profile.publicRepos} repos
+                </span>
+                {(d.showPinned !== false
+                  ? (profile.topLanguages || []).slice(0, 3)
+                  : []
+                ).map((lang: { name: string }) => (
+                  <span
+                    key={lang.name}
+                    className="px-2 py-0.5 text-[11px] font-medium"
+                    style={{
+                      borderRadius: 'calc(var(--pv-radius) * 0.6)',
+                      border: '1px solid var(--pv-border)',
+                      color: 'var(--pv-muted)',
+                    }}
+                  >
+                    {lang.name}
+                  </span>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-xs leading-relaxed" style={mutedStyle()}>
+              Projetos, contribuições e estatísticas open source.
+            </p>
+          )}
+          {profileUrl ? (
+            <ActionPill href={normalizeUrl(profileUrl)}>
+              Ver perfil no GitHub <ArrowUpRight className="h-3.5 w-3.5" />
+            </ActionPill>
+          ) : null}
         </div>
       )
     }
 
     case 'spotify':
-      return (
-        <div className="flex h-full w-full flex-col justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Headphones className="h-5 w-5" style={{ color: '#1DB954' }} />
-            <h3 className="font-semibold" style={displayStyle()}>{d.variant || 'Música'}</h3>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span
-                  className="h-6 w-6 shrink-0 rounded"
-                  style={{ background: 'color-mix(in srgb, var(--pv-text) 10%, transparent)' }}
-                />
-                <span
-                  className="h-2 flex-1 rounded-full"
-                  style={{ background: 'color-mix(in srgb, var(--pv-text) 10%, transparent)' }}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )
+      return <SpotifyFace data={block.data as SpotifyBlockData} />
 
     case 'youtube':
-      return <VideoFace title={d.title || 'YouTube'} embedUrl={d.videoUrl} brand="#FF0000" />
+      return <VideoFace title={d.title || 'YouTube'} embedUrl={d.resolved?.embedUrl || d.videoUrl} resolved={d.resolved} brand="#FF0000" />
 
     case 'calendar':
       return (
@@ -592,29 +620,10 @@ function ThemedBody({ block }: { block: Block }) {
       )
 
     case 'form':
-      return <LeadCapture block={block} source="form" title={d.title || 'Formulário'} buttonText={d.buttonText || 'Enviar'} fields={d.fields || ['Nome', 'E-mail']} successMessage={d.successMessage} />
+      return <LeadCapture block={block} source="form" title={d.title || 'Formulário'} buttonText={d.buttonText || 'Enviar'} fields={d.fields || ['Nome', 'E-mail']} successMessage={d.successMessage} preview={preview} />
 
     case 'faq':
-      return (
-        <div className="flex h-full w-full flex-col justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <HelpCircle className="h-5 w-5" style={{ color: 'var(--pv-accent)' }} />
-            <h3 className="font-semibold" style={displayStyle()}>{d.title || 'FAQ'}</h3>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            {(d.items || []).slice(0, 3).map((item: any, i: number) => (
-              <div
-                key={i}
-                className="gl-faq-row flex items-center justify-between rounded-lg px-3 py-2 text-xs"
-                style={{ background: 'color-mix(in srgb, var(--pv-text) 6%, transparent)' }}
-              >
-                <span style={{ color: 'var(--pv-text)' }}>{item.question}</span>
-                <ChevronDown className="h-3 w-3" style={{ color: 'var(--pv-muted)' }} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )
+      return <FaqAccordion title={d.title || 'FAQ'} items={d.items || []} />
 
     case 'testimonial':
       return (
@@ -641,35 +650,68 @@ function ThemedBody({ block }: { block: Block }) {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   VÍDEO — thumbnail real quando dá para extrair da URL; fallback
-   estilizado (painel do tema + play no accent) quando não dá.
-   ═══════════════════════════════════════════════════════════════ */
+/* ═════════════════════════════════════════════════════════════
+   VÍDEO — thumbnail real (salva no snapshot pelo editor) com
+   click-to-play: o clique troca a capa pelo player embutido no
+   próprio bloco, sem sair da página. Sem thumbnail (vídeo privado,
+   oEmbed falhou), mantém o fallback estilizado do tema.
+   ═════════════════════════════════════════════════════════════ */
 
 function VideoFace({
   title,
   embedUrl,
+  resolved,
   brand,
 }: {
   title: string
   embedUrl?: string
+  resolved?: ResolvedVideoMeta | null
   brand?: string
 }) {
-  const thumbnail = embedUrl ? extractVideoThumbnail(embedUrl) : null
+  const [playing, setPlaying] = useState(false)
+  // Snapshot salvo no editor; derivada da URL como último recurso.
+  const thumbnail = resolved?.thumbnailUrl || extractVideoThumbnail(embedUrl || '') || null
+  // Normaliza (legacy: blocos antigos guardavam a URL crua de watch/youtu.be).
+  const playerUrl = toVideoEmbedUrl(resolved?.embedUrl || embedUrl || '')
+
+  if (playing && playerUrl) {
+    return (
+      <div
+        className="relative h-full w-full overflow-hidden"
+        style={{
+          borderRadius: 'var(--pv-radius)',
+          border: '1px solid var(--pv-border)',
+          background: '#000000',
+        }}
+      >
+        <iframe
+          src={`${playerUrl}${playerUrl.includes('?') ? '&' : '?'}autoplay=1`}
+          className="absolute inset-0 h-full w-full"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          title={resolved?.title || title}
+        />
+      </div>
+    )
+  }
 
   return (
-    <div
-      className="relative flex h-full w-full items-center justify-center overflow-hidden"
+    <button
+      type="button"
+      onClick={() => playerUrl && setPlaying(true)}
+      className="relative flex h-full w-full items-center justify-center overflow-hidden text-left"
       style={{
         borderRadius: 'var(--pv-radius)',
         border: '1px solid var(--pv-border)',
         background: thumbnail ? '#000000' : 'color-mix(in srgb, var(--pv-text) 6%, transparent)',
+        cursor: playerUrl ? 'pointer' : 'default',
       }}
+      aria-label={resolved?.title || title}
     >
       {thumbnail ? (
         <img
           src={thumbnail}
-          alt={title}
+          alt={resolved?.title || title}
           className="absolute inset-0 h-full w-full object-cover"
           onError={(e) => {
             ;(e.target as HTMLImageElement).style.display = 'none'
@@ -687,7 +729,7 @@ function VideoFace({
         <Play className="h-5 w-5 fill-current" />
       </span>
       <span
-        className="absolute inset-x-0 bottom-0 truncate px-3 py-1.5 text-sm font-medium"
+        className="pointer-events-none absolute inset-x-0 bottom-0 truncate px-3 py-1.5 text-sm font-medium"
         style={{
           color: thumbnail ? '#FFFFFF' : 'var(--pv-text)',
           background: thumbnail
@@ -695,8 +737,301 @@ function VideoFace({
             : 'transparent',
         }}
       >
-        {title}
+        {resolved?.title || title}
       </span>
+    </button>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
+   GALERIA — grid real a partir das imagens cadastradas; o grid de
+   placeholders só aparece quando NÃO há nenhuma imagem. Clique abre
+   lightbox simples (sem sair da página).
+   ═══════════════════════════════════════════════════════════ */
+
+function GalleryFace({ images }: { images: { url: string; caption?: string }[] }) {
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const hasImages = images.length > 0
+
+  useEffect(() => {
+    if (lightboxIndex === null) return
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') setLightboxIndex(null)
+      if (event.key === 'ArrowRight') setLightboxIndex((i) => (i === null ? null : Math.min(i + 1, images.length - 1)))
+      if (event.key === 'ArrowLeft') setLightboxIndex((i) => (i === null ? null : Math.max(i - 1, 0)))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lightboxIndex, images.length])
+
+  if (!hasImages) {
+    return (
+      <div className="grid h-full w-full grid-cols-2 gap-2">
+        {[0, 1, 2, 3].map((i) => (
+          <PagePlaceholder key={i} icon={<ImageIcon className="h-5 w-5" />} />
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div className="grid h-full w-full grid-cols-2 gap-2 overflow-y-auto">
+        {images.map((img, i) => (
+          <button
+            key={`${img.url}-${i}`}
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation()
+              setLightboxIndex(i)
+            }}
+            className="group relative min-h-0 overflow-hidden"
+            style={{ borderRadius: 'calc(var(--pv-radius) * 0.8)' }}
+            aria-label={img.caption || `Abrir imagem ${i + 1}`}
+          >
+            <img
+              src={img.url}
+              alt={img.caption || `Imagem ${i + 1}`}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              loading="lazy"
+            />
+          </button>
+        ))}
+      </div>
+
+      {lightboxIndex !== null
+        ? createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 animate-fade-in"
+          onClick={() => setLightboxIndex(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <button
+            type="button"
+            onClick={() => setLightboxIndex(null)}
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          {lightboxIndex > 0 ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                setLightboxIndex(lightboxIndex - 1)
+              }}
+              className="absolute left-3 flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="Imagem anterior"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+          ) : null}
+          <img
+            src={images[lightboxIndex].url}
+            alt={images[lightboxIndex].caption || `Imagem ${lightboxIndex + 1}`}
+            className="max-h-full max-w-full rounded-lg object-contain"
+            onClick={(event) => event.stopPropagation()}
+          />
+          {lightboxIndex < images.length - 1 ? (
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                setLightboxIndex(lightboxIndex + 1)
+              }}
+              className="absolute right-3 flex h-10 w-10 items-center justify-center rounded-full text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="Próxima imagem"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+          ) : null}
+        </div>,
+          // Portal para o body: o backdrop-filter da superfície de vidro cria um
+          // containing block que prenderia o overlay position:fixed no bloco.
+          document.body
+        )
+        : null}
+    </>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SPOTIFY — capa/título/artista do snapshot salvo no editor;
+   play embute o player compacto no próprio bloco (ou direto,
+   se o dono marcou "mostrar player").
+   ═══════════════════════════════════════════════════════════ */
+
+function SpotifyFace({ data }: { data: SpotifyBlockData }) {
+  const [showPlayer, setShowPlayer] = useState(false)
+  const resolved: SpotifyResolvedMeta | null = data.resolved || null
+  const embedUrl = resolved?.embedUrl || (data.uri ? `https://open.spotify.com/embed/${parseSpotifyKindId(data.uri)}` : '')
+
+  if (!resolved && !data.uri) {
+    return (
+      <div className="flex h-full w-full flex-col justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Headphones className="h-5 w-5" style={{ color: '#1DB954' }} />
+          <h3 className="font-semibold" style={displayStyle()}>Spotify</h3>
+        </div>
+        <p className="text-xs" style={mutedStyle()}>
+          Cole o link de uma música, álbum ou playlist no editor.
+        </p>
+      </div>
+    )
+  }
+
+  if (data.autoplayEmbed && embedUrl) {
+    return (
+      <iframe
+        src={embedUrl}
+        width="100%"
+        height={resolved?.kind === 'track' ? 80 : 152}
+        frameBorder="0"
+        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+        loading="lazy"
+        style={{ borderRadius: 'var(--pv-radius)', border: 0 }}
+        title={resolved?.title || 'Spotify'}
+      />
+    )
+  }
+
+  const cover = resolved?.thumbnailUrl
+
+  if (showPlayer && embedUrl) {
+    return (
+      <iframe
+        src={embedUrl}
+        width="100%"
+        height={resolved?.kind === 'track' ? 80 : 152}
+        frameBorder="0"
+        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+        loading="lazy"
+        style={{ borderRadius: 'var(--pv-radius)', border: 0 }}
+        title={resolved?.title || 'Spotify'}
+      />
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation()
+        if (embedUrl) setShowPlayer(true)
+      }}
+      className="flex h-full w-full flex-col justify-between gap-2 text-left"
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        {cover ? (
+          <img
+            src={cover}
+            alt={resolved?.title || 'Spotify'}
+            className="h-11 w-11 shrink-0 rounded object-cover"
+            style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}
+            onError={(e) => {
+              ;(e.target as HTMLImageElement).style.display = 'none'
+            }}
+          />
+        ) : (
+          <span
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded"
+            style={{ background: 'color-mix(in srgb, #1DB954 18%, transparent)' }}
+          >
+            <Headphones className="h-5 w-5" style={{ color: '#1DB954' }} />
+          </span>
+        )}
+        <div className="min-w-0">
+          <h3 className="truncate font-semibold" style={displayStyle()}>
+            {resolved?.title || 'Spotify'}
+          </h3>
+          {resolved?.owner ? (
+            <p className="truncate text-xs" style={mutedStyle()}>{resolved.owner}</p>
+          ) : null}
+        </div>
+      </div>
+      <span
+        className="gl-pill inline-flex w-fit items-center gap-1.5 px-4 py-2 text-sm font-semibold"
+        style={{
+          borderRadius: 'var(--pv-radius)',
+          background: '#1DB954',
+          color: '#FFFFFF',
+          boxShadow: '0 2px 12px color-mix(in srgb, #1DB954 25%, transparent)',
+        }}
+      >
+        <Play className="h-4 w-4 fill-current" />
+        Ouvir
+      </span>
+    </button>
+  )
+}
+
+/** Extrai "kind/id" de um link ou URI salvo (usado só como fallback local). */
+function parseSpotifyKindId(uri: string): string | null {
+  const m = uri.match(/(?:spotify:(track|album|playlist|artist|show|episode):|open\.spotify\.com\/(?:intl-[a-z]{2}\/)?(?:track|album|playlist|artist|show|episode)\/)([a-zA-Z0-9]+)/)
+  return m ? `${m[1]}/${m[2]}` : null
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FAQ — acordeão com todas as perguntas, uma aberta por vez.
+   ═══════════════════════════════════════════════════════════ */
+
+function FaqAccordion({ title, items }: { title: string; items: { question: string; answer: string }[] }) {
+  const [openIndex, setOpenIndex] = useState<number | null>(null)
+
+  if (items.length === 0) {
+    return (
+      <div className="flex h-full w-full flex-col justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <HelpCircle className="h-5 w-5" style={{ color: 'var(--pv-accent)' }} />
+          <h3 className="font-semibold" style={displayStyle()}>{title}</h3>
+        </div>
+        <p className="text-xs" style={mutedStyle()}>
+          Cadastre perguntas frequentes no editor.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-full w-full flex-col gap-2 overflow-y-auto">
+      <div className="flex items-center gap-2">
+        <HelpCircle className="h-5 w-5" style={{ color: 'var(--pv-accent)' }} />
+        <h3 className="font-semibold" style={displayStyle()}>{title}</h3>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {items.map((item, i) => {
+          const open = openIndex === i
+          return (
+            <div key={i} className="rounded-lg" style={{ background: 'color-mix(in srgb, var(--pv-text) 6%, transparent)' }}>
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setOpenIndex(open ? null : i)
+                }}
+                className="gl-faq-row flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs font-medium"
+                style={{ color: 'var(--pv-text)' }}
+                aria-expanded={open}
+              >
+                <span>{item.question}</span>
+                <ChevronDown
+                  className={`h-3 w-3 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+                  style={{ color: 'var(--pv-muted)' }}
+                />
+              </button>
+              {open ? (
+                <div className="px-3 pb-2">
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--pv-muted)' }}>
+                    {item.answer}
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -710,6 +1045,7 @@ function LeadCapture({
   emailPlaceholder,
   fields,
   successMessage,
+  preview = false,
 }: {
   block: Block
   source: 'newsletter' | 'form'
@@ -719,28 +1055,87 @@ function LeadCapture({
   emailPlaceholder?: string
   fields?: string[]
   successMessage?: string
+  /** Na prévia do editor, o envio é demonstrativo — não grava na Audiência. */
+  preview?: boolean
 }) {
   const [values, setValues] = useState<Record<string, string>>({})
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const formFields = source === 'newsletter' ? ['E-mail'] : fields || ['Nome', 'E-mail']
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  /** Validação básica antes de salvar: obrigatórios + formato de e-mail. */
+  function validate(): string | null {
+    const emailField = formFields.find((field) => /e-?mail|mail/i.test(field))
+    for (const field of formFields) {
+      const value = (values[field] || '').trim()
+      if (!value) return `Preencha o campo "${field}".`
+      if (field === emailField && !EMAIL_RE.test(value)) return 'Informe um e-mail válido.'
+    }
+    return null
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const validationError = validate()
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    setError(null)
+    if (!block.userId) {
+      setError('Não foi possível enviar agora.')
+      return
+    }
     const emailField = formFields.find((field) => /e-?mail|mail/i.test(field)) || 'E-mail'
     const nameField = formFields.find((field) => /nome|name/i.test(field))
-    const email = values[emailField]?.trim()
-    if (!email || !block.userId) return
+    const messageField = formFields.find((field) => /mensagem|message|texto/i.test(field))
+    const extraFields = formFields.filter(
+      (field) => field !== emailField && field !== nameField && field !== messageField
+    )
+    const message = messageField
+      ? (values[messageField] || '').trim()
+      : extraFields.length > 0
+        ? extraFields.map((field) => `${field}: ${(values[field] || '').trim()}`).join(' · ')
+        : undefined
+
     setSubmitting(true)
     try {
-      await createLead({ userId: block.userId, blockId: block.id, name: nameField ? values[nameField]?.trim() || '' : '', email, source })
+      if (!preview) {
+        await createLead({
+          userId: block.userId,
+          blockId: block.id,
+          name: nameField ? (values[nameField] || '').trim() : '',
+          email: (values[emailField] || '').trim(),
+          source,
+          sourceLabel: `${source === 'newsletter' ? 'Newsletter' : 'Formulário'}: ${title}`,
+          message: message || undefined,
+        })
+      }
       setSubmitted(true)
+    } catch {
+      setError('Não foi possível enviar. Tente novamente.')
     } finally {
       setSubmitting(false)
     }
   }
 
-  if (submitted) return <div className="flex h-full w-full items-center justify-center text-center text-sm font-semibold" style={displayStyle()}>{successMessage || 'Recebemos seu contato!'}</div>
+  if (submitted) {
+    return (
+      <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-center">
+        <span
+          className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold"
+          style={{ background: 'var(--pv-accent)', color: 'var(--pv-accent-text)' }}
+        >
+          ✓
+        </span>
+        <p className="text-sm font-semibold" style={displayStyle()}>
+          {successMessage || 'Mensagem enviada!'}
+        </p>
+      </div>
+    )
+  }
 
   return (
     <form onSubmit={submit} className="flex h-full w-full flex-col justify-center gap-2" onClick={(event) => event.stopPropagation()}>
@@ -760,7 +1155,10 @@ function LeadCapture({
               required={source === 'form' || isEmail}
               type={isEmail ? 'email' : 'text'}
               value={values[field] || ''}
-              onChange={(event) => setValues((current) => ({ ...current, [field]: event.target.value }))}
+              onChange={(event) => {
+                setValues((current) => ({ ...current, [field]: event.target.value }))
+                if (error) setError(null)
+              }}
               placeholder={isEmail ? emailPlaceholder || field : field}
               className="gl-field"
               style={inputStyle()}
@@ -771,6 +1169,11 @@ function LeadCapture({
           {submitting ? 'Enviando...' : buttonText}
         </ActionPill>
       </div>
+      {error ? (
+        <p className="text-xs" style={{ color: '#EF4444' }} role="alert">
+          {error}
+        </p>
+      ) : null}
     </form>
   )
 }

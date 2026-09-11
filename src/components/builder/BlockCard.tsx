@@ -1,4 +1,5 @@
 import type { Block } from '../../types'
+import { extractVideoThumbnail } from '../../utils/videoThumbnails'
 import { getBlockStatus } from '../../utils/schedule'
 import { hasSmartVariation } from '../../utils/smartBlocks'
 import {
@@ -237,38 +238,79 @@ function BlockBody({ block }: { block: Block }) {
         </div>
       )
 
-    case 'gallery':
+    case 'gallery': {
+      const images = d.images || []
+      if (images.length === 0) {
+        return (
+          <div className="grid h-full w-full grid-cols-2 gap-2">
+            {[0, 1, 2, 3].map((i: number) => (
+              <div
+                key={i}
+                className="flex items-center justify-center rounded-lg"
+                style={{ background: 'var(--color-surface-hover)', color: 'var(--color-text-secondary)' }}
+              >
+                <ImageIcon className="h-5 w-5" />
+              </div>
+            ))}
+          </div>
+        )
+      }
       return (
-        <div className="grid h-full w-full grid-cols-2 gap-2">
-          {[0, 1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="flex items-center justify-center rounded-lg"
-              style={{ background: 'var(--color-surface-hover)', color: 'var(--color-text-secondary)' }}
-            >
-              <ImageIcon className="h-5 w-5" />
+        <div className="grid h-full w-full grid-cols-2 gap-2 overflow-hidden">
+          {images.slice(0, 4).map((img: { url: string }, i: number) => (
+            <div key={i} className="overflow-hidden rounded-lg">
+              <img src={img.url} alt="" className="h-full w-full object-cover" loading="lazy" />
             </div>
           ))}
         </div>
       )
+    }
 
     case 'video':
+    case 'youtube': {
+      const isYouTubeType = block.type === 'youtube'
+      const rawUrl = isYouTubeType ? d.videoUrl || d.resolved?.sourceUrl || '' : d.sourceUrl || d.embedUrl || ''
+      const thumbnail = d.resolved?.thumbnailUrl || extractVideoThumbnail(rawUrl)
       return (
         <div
           className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl"
-          style={{ background: 'var(--color-surface-hover)' }}
+          style={{
+            background: thumbnail ? '#000000' : 'var(--color-surface-hover)',
+            border: thumbnail ? '1px solid var(--color-border)' : undefined,
+          }}
         >
+          {thumbnail ? (
+            <img
+              src={thumbnail}
+              alt={d.resolved?.title || d.title || 'Vídeo'}
+              className="absolute inset-0 h-full w-full object-cover"
+              onError={(e) => {
+                ;(e.target as HTMLImageElement).style.display = 'none'
+              }}
+            />
+          ) : null}
           <span
-            className="flex h-12 w-12 items-center justify-center rounded-full"
-            style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
+            className="relative flex h-12 w-12 items-center justify-center rounded-full"
+            style={{
+              background: isYouTubeType ? '#FF0000' : 'var(--accent)',
+              color: 'var(--accent-text)',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+            }}
           >
             <Play className="h-5 w-5 fill-current" />
           </span>
-          <span className="absolute bottom-2 left-3 text-sm font-medium text-ink">
-            {d.title || 'Vídeo'}
+          <span
+            className="absolute inset-x-0 bottom-2 truncate px-3 text-sm font-medium"
+            style={{
+              color: thumbnail ? '#FFFFFF' : undefined,
+              background: thumbnail ? 'linear-gradient(transparent, rgba(0,0,0,0.7))' : undefined,
+            }}
+          >
+            {d.resolved?.title || d.title || (isYouTubeType ? 'YouTube' : 'Vídeo')}
           </span>
         </div>
       )
+    }
 
     case 'text':
       return (
@@ -294,50 +336,80 @@ function BlockBody({ block }: { block: Block }) {
           </div>
         </div>
       )
-    case 'github':
+    case 'github': {
+      const profile = d.profile || null
+      if (!profile) {
+        return (
+          <div className="flex h-full w-full flex-col justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Code2 className="h-5 w-5" style={{ color: 'var(--color-text-secondary)' }} />
+              <h3 className="font-semibold text-ink truncate">{d.username || 'GitHub'}</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-dim">Perfil + stats</span>
+              {d.showPinned && <span className="text-xs text-dim">+ linguagens</span>}
+            </div>
+            <div className="mt-1 h-2 rounded-full" style={{ background: 'var(--color-surface-hover)' }} />
+          </div>
+        )
+      }
       return (
         <div className="flex h-full w-full flex-col justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Code2 className="h-5 w-5" style={{ color: 'var(--color-text-secondary)' }} />
-            <h3 className="font-semibold text-ink truncate">{d.username || 'GitHub'}</h3>
+            {profile.avatarUrl ? (
+              <img src={profile.avatarUrl} alt={profile.login} className="h-9 w-9 shrink-0 rounded-full object-cover" />
+            ) : (
+              <Code2 className="h-5 w-5" style={{ color: 'var(--color-text-secondary)' }} />
+            )}
+            <h3 className="min-w-0 truncate font-semibold text-ink">{profile.name || profile.login}</h3>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-dim">Perfil + stats</span>
-            {d.showPinned && <span className="text-xs text-dim">+ linguagens</span>}
-          </div>
-          <div className="mt-1 h-2 rounded-full" style={{ background: 'var(--color-surface-hover)' }} />
-        </div>
-      )
-
-    case 'spotify':
-      return (
-        <div className="flex h-full w-full flex-col justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Headphones className="h-5 w-5" style={{ color: '#1DB954' }} />
-            <h3 className="font-semibold text-ink truncate">{d.variant || 'Música'}</h3>
-          </div>
-          <div className="flex gap-1">
-            {[0,1,2].map(i => (
-              <div key={i} className="h-3 flex-1 rounded-full" style={{ background: 'var(--color-surface-hover)' }} />
+          {profile.bio ? <p className="line-clamp-2 text-xs leading-relaxed text-dim">{profile.bio}</p> : null}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className="px-2 py-0.5 text-[11px] font-semibold"
+              style={{ borderRadius: '999px', background: 'var(--accent-soft)', color: 'var(--accent-hover)' }}
+            >
+              {profile.publicRepos} repos
+            </span>
+            {(d.showPinned !== false ? (profile.topLanguages || []).slice(0, 3) : []).map((lang: { name: string }) => (
+              <span
+                key={lang.name}
+                className="px-2 py-0.5 text-[11px] font-medium text-dim"
+                style={{ borderRadius: '999px', border: '1px solid var(--color-border)' }}
+              >
+                {lang.name}
+              </span>
             ))}
           </div>
-          <span className="text-xs text-dim">Spotify embed</span>
         </div>
       )
+    }
 
-    case 'youtube':
+    case 'spotify': {
+      const resolved = d.resolved || null
+      const cover = resolved?.thumbnailUrl
       return (
-        <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl"
-          style={{ background: 'var(--color-surface-hover)' }}>
-          <span className="flex h-12 w-12 items-center justify-center rounded-full"
-            style={{ background: '#FF0000', color: '#FFFFFF' }}>
-            <Play className="h-5 w-5 fill-current" />
-          </span>
-          <span className="absolute bottom-2 left-3 text-sm font-medium text-ink">
-            {d.title || 'YouTube'}
-          </span>
+        <div className="flex h-full w-full flex-col justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            {cover ? (
+              <img src={cover} alt="" className="h-9 w-9 shrink-0 rounded object-cover" />
+            ) : (
+              <span
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded"
+                style={{ background: 'color-mix(in srgb, #1DB954 18%, transparent)' }}
+              >
+                <Headphones className="h-4 w-4" style={{ color: '#1DB954' }} />
+              </span>
+            )}
+            <div className="min-w-0">
+              <h3 className="truncate font-semibold text-ink">{resolved?.title || d.variant || 'Spotify'}</h3>
+              {resolved?.owner ? <p className="truncate text-xs text-dim">{resolved.owner}</p> : null}
+            </div>
+          </div>
+          <span className="text-xs text-dim">{d.autoplayEmbed ? 'Player embutido' : 'Clique para ouvir'}</span>
         </div>
       )
+    }
 
     case 'calendar':
       return (

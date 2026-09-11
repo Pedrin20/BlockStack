@@ -10,6 +10,10 @@ export interface Lead {
   name: string
   email: string
   source: LeadSource
+  /** Rótulo de origem exibido na Audiência — ex: "Formulário: Fale comigo" */
+  sourceLabel?: string
+  /** Conteúdo livre (mensagem/campos customizados) enviado no bloco */
+  message?: string
   createdAt?: { toDate?: () => Date } | null
 }
 

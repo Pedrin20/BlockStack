@@ -43,12 +43,17 @@ export function Sidebar() {
       }}
     >
       {/* Marca */}
-      <div className={`mb-4 flex items-center px-4 pt-4 ${collapsed ? 'justify-center px-0' : 'px-3'}`}>
+      <div className={`mb-4 flex items-center gap-2.5 px-4 pt-4 ${collapsed ? 'justify-center px-0' : 'px-3'}`}>
         <img
-          src={collapsed ? '/brand/mark.svg' : '/brand/wordmark-dark-bg.svg'}
-          alt="BlockStack"
-          className={collapsed ? 'h-9 w-9' : 'h-10 w-auto max-w-full'}
+          src={collapsed ? '/brand/icon-compact.svg' : '/brand/app-icon.svg'}
+          alt=""
+          className="h-9 w-9 shrink-0"
         />
+        {!collapsed && (
+          <span className="text-lg font-bold tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
+            BlockStack
+          </span>
+        )}
       </div>
 
       {/* Navigation */}
