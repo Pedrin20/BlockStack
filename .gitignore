@@ -28,3 +28,6 @@ dist-ssr
 .env.*.local
 
 .freebuff
+
+firebase.json
+firestore.rules
