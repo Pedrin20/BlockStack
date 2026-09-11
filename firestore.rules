@@ -74,19 +74,45 @@ service cloud.firestore {
     // Dono: lê as próprias leads, alterna apenas `read` e pode apagar.
     // ─────────────────────────────────────────────────────────────
     match /leads/{leadId} {
+      // A consulta do painel sempre precisa filtrar por userId. O Firestore
+      // consegue provar essa condição para cada documento retornado.
       allow get, list: if isOwner(resource.data.userId);
+
+      // A captura é pública por design, mas a lead precisa apontar para um
+      // bloco real do mesmo usuário. Sem esta verificação qualquer visitante
+      // poderia escolher um userId e inserir spam no inbox de outra pessoa.
       allow create: if request.resource.data.userId is string
         && request.resource.data.userId.size() > 0
         && request.resource.data.blockId is string
+        && request.resource.data.blockId.size() > 0
         && request.resource.data.name is string
+        && request.resource.data.name.size() <= 120
         && request.resource.data.email is string
+        && request.resource.data.email.size() > 3
+        && request.resource.data.email.size() <= 254
         && request.resource.data.source in ['newsletter', 'form']
         && request.resource.data.read == false
         && request.resource.data.hasOnly([
              'userId', 'blockId', 'name', 'email', 'source',
              'sourceLabel', 'message', 'fields', 'read', 'createdAt',
-           ]);
+           ])
+        && (!request.resource.data.keys().hasAny(['sourceLabel'])
+          || (request.resource.data.sourceLabel is string
+            && request.resource.data.sourceLabel.size() <= 200))
+        && (!request.resource.data.keys().hasAny(['message'])
+          || (request.resource.data.message is string
+            && request.resource.data.message.size() <= 5000))
+        && (!request.resource.data.keys().hasAny(['fields'])
+          || (request.resource.data.fields is map
+            && request.resource.data.fields.size() <= 20))
+        && exists(/databases/$(database)/documents/blocks/$(request.resource.data.blockId))
+        && get(/databases/$(database)/documents/blocks/$(request.resource.data.blockId)).data.userId == request.resource.data.userId
+        && get(/databases/$(database)/documents/blocks/$(request.resource.data.blockId)).data.type == request.resource.data.source;
+
+      // O dono só pode alternar o estado de leitura, nunca trocar o dono,
+      // o conteúdo, a origem ou o timestamp da captura.
       allow update: if isOwner(resource.data.userId)
+        && request.resource.data.read is bool
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
       allow delete: if isOwner(resource.data.userId);
     }
