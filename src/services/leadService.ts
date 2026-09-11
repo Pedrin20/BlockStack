@@ -22,11 +22,24 @@ export interface Lead {
 }
 
 export async function createLead(lead: Omit<Lead, 'id' | 'createdAt'>) {
-  await addDoc(collection(db, 'leads'), {
-    ...lead,
-    read: false,
-    createdAt: serverTimestamp(),
-  })
+  try {
+    await addDoc(collection(db, 'leads'), {
+      ...lead,
+      // O visitante nunca escolhe o estado inicial da captura.
+      read: false,
+      createdAt: serverTimestamp(),
+    })
+  } catch (error) {
+    // Não registre nome/e-mail: o código e o contexto técnico já bastam
+    // para diferenciar bloqueador de navegador, regra negada e indisponibilidade.
+    console.error('[leadService] Falha ao criar lead', {
+      error,
+      userId: lead.userId,
+      blockId: lead.blockId,
+      source: lead.source,
+    })
+    throw error
+  }
 }
 
 export function subscribeToLeads(userId: string, callback: (leads: Lead[]) => void) {
@@ -37,7 +50,12 @@ export function subscribeToLeads(userId: string, callback: (leads: Lead[]) => vo
       leads.sort((a, b) => (b.createdAt?.toDate?.().getTime() || 0) - (a.createdAt?.toDate?.().getTime() || 0))
       callback(leads)
     },
-    () => callback([]),
+    (error) => {
+      // Antes este erro virava silenciosamente uma lista vazia, o que
+      // mascarava permission-denied e problemas de rede no painel.
+      console.error('[leadService] Falha ao assinar leads', { error, userId })
+      callback([])
+    },
   )
 }
 

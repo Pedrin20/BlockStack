@@ -1125,8 +1125,18 @@ function LeadCapture({
         })
       }
       setSubmitted(true)
-    } catch {
-      setError('Não foi possível enviar. Tente novamente.')
+    } catch (submissionError) {
+      // Mantém o detalhe técnico no console para diagnóstico sem exibir
+      // informações internas do Firestore para quem preenche o formulário.
+      console.error('[LeadCapture] Falha no envio', submissionError)
+      const code = (submissionError as { code?: string } | null)?.code
+      if (code === 'permission-denied') {
+        setError('O envio não foi autorizado. Verifique as regras do Firestore.')
+      } else if (code === 'unavailable' || code === 'deadline-exceeded') {
+        setError('Não foi possível conectar ao serviço. Desative bloqueadores e tente novamente.')
+      } else {
+        setError('Não foi possível enviar. Tente novamente.')
+      }
     } finally {
       setSubmitting(false)
     }
