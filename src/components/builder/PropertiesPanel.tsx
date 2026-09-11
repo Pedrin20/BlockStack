@@ -13,6 +13,7 @@ import {
   TRAFFIC_SOURCE_LABELS,
 } from '../../types'
 import { Trash2, MousePointerClick, CalendarClock, Sparkles } from 'lucide-react'
+import { ImageUpload } from '../ImageUpload'
 import {
   VideoSection,
   GitHubSection,
@@ -119,7 +120,7 @@ export function PropertiesPanel({
       </Field>
 
       {/* Subtitle field */}
-      {['header', 'product', 'service', 'newsletter'].includes(block.type) ? (
+      {['header', 'product', 'service', 'newsletter', 'form'].includes(block.type) ? (
         <Field label="Subtítulo">
           <textarea
             value={d.bio || d.description || ''}
@@ -130,6 +131,17 @@ export function PropertiesPanel({
             rows={3}
             className={`w-full resize-none rounded-lg px-3 py-2 text-sm text-ink outline-none transition-colors ${focusStyle}`}
             style={{ ...inputStyle, borderColor: 'var(--color-border)', background: 'var(--color-background-elevated)' }}
+          />
+        </Field>
+      ) : null}
+
+      {/* Avatar — apenas Cabeçalho */}
+      {block.type === 'header' ? (
+        <Field label="Foto">
+          <ImageUpload
+            key={block.id}
+            value={d.avatarUrl || ''}
+            onChange={(url) => updateData('avatarUrl', url)}
           />
         </Field>
       ) : null}

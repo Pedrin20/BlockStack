@@ -1,0 +1,131 @@
+rules_version = '2';
+
+// ═══════════════════════════════════════════════════════════════
+// BlockStack — Firestore Security Rules
+//
+// Modelo de acesso:
+//   • Visitantes (sem login) leem o conteúdo público da página
+//     /:username (blocks, pageSettings, users, links) e CRIAM
+//     leads (formulários/newsletter) e contadores de analytics.
+//   • O dono (request.auth.uid) controla total e exclusivamente
+//     os próprios documentos.
+//
+// Deploy: `firebase deploy --only firestore:rules` (com firebase.json)
+//         ou cole o conteúdo em Console → Firestore → Regras.
+// ═══════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // users — perfil público
+    // Leitura pública: busca por username (disponibilidade no signup
+    // e carregamento de /:username). Escrita apenas pelo dono.
+    // ─────────────────────────────────────────────────────────────
+    match /users/{uid} {
+      allow get, list: if true;
+      allow create: if isOwner(uid)
+        && request.resource.data.username is string
+        && request.resource.data.username.size() > 0;
+      allow update, delete: if isOwner(uid);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // blocks — conteúdo da página
+    // Leitura pública: a página /:username lista os blocos do dono
+    // sem login. Escrita apenas pelo dono; o criador do documento
+    // precisa ser o próprio dono e a posse não pode ser alterada.
+    //
+    // Obs.: qualquer visitante pode ler os blocos de qualquer usuário
+    // (limite do modelo de dados atual — não há flag `published`
+    // denormalizada em cada bloco para checar via rules).
+    // ─────────────────────────────────────────────────────────────
+    match /blocks/{blockId} {
+      allow get, list: if true;
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId)
+        && request.resource.data.userId == resource.data.userId;
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // pageSettings/{uid} — tema, densidade e flag `published`
+    // Leitura pública: a página pública verifica `published`.
+    // Escrita apenas pelo dono do documento (docId == uid).
+    // ─────────────────────────────────────────────────────────────
+    match /pageSettings/{uid} {
+      allow get: if true;
+      allow list: if isOwner(uid);
+      allow create, update, delete: if isOwner(uid);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // leads — respostas de Formulário/Newsletter (inbox da Audiência)
+    // Visitante: SOMENTE create, com campos validados — não pode ler,
+    // alterar `read` nem apagar nada.
+    // Dono: lê as próprias leads, alterna apenas `read` e pode apagar.
+    // ─────────────────────────────────────────────────────────────
+    match /leads/{leadId} {
+      allow get, list: if isOwner(resource.data.userId);
+      allow create: if request.resource.data.userId is string
+        && request.resource.data.userId.size() > 0
+        && request.resource.data.blockId is string
+        && request.resource.data.name is string
+        && request.resource.data.email is string
+        && request.resource.data.source in ['newsletter', 'form']
+        && request.resource.data.read == false
+        && request.resource.data.hasOnly([
+             'userId', 'blockId', 'name', 'email', 'source',
+             'sourceLabel', 'message', 'fields', 'read', 'createdAt',
+           ]);
+      allow update: if isOwner(resource.data.userId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // analytics/{uid}/days/{YYYY-MM-DD} — contadores agregados
+    // Visitante: create do dia e update para incrementar os contadores
+    // (setDoc merge). O update exige `date` inalterado para o documento
+    // não ser reaproveitado. SEM leitura pública — só o dono vê as
+    // próprias métricas.
+    //
+    // Obs.: update público não restringe os campos de contador porque
+    // os incrementos usam FieldValue (invisíveis para as rules);
+    // a superfície exposta são apenas agregados numéricos do dia.
+    // ─────────────────────────────────────────────────────────────
+    match /analytics/{uid}/days/{dayId} {
+      allow get, list: if isOwner(uid);
+      allow create: if dayId.matches('^\\d{4}-\\d{2}-\\d{2}$')
+        && request.resource.data.date == dayId;
+      allow update: if request.resource.data.date == resource.data.date;
+      allow delete: if isOwner(uid);
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // links (legado) — /r/:linkId lê o link e incrementa `clicks`
+    // sem login. O dono mantém CRUD completo.
+    // ─────────────────────────────────────────────────────────────
+    match /links/{linkId} {
+      allow get: if true;
+      allow list: if isOwner(resource.data.userId);
+      allow create: if isOwner(request.resource.data.userId);
+      allow update: if isOwner(resource.data.userId)
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks']);
+      allow delete: if isOwner(resource.data.userId);
+    }
+
+    // Qualquer outro caminho: negado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

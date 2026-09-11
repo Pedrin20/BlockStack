@@ -442,6 +442,27 @@ function BlockBody({ block }: { block: Block }) {
         </div>
       )
 
+    case 'form':
+      return (
+        <div className="flex h-full w-full flex-col justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" style={{ color: 'var(--accent-hover)' }} />
+            <h3 className="truncate font-semibold text-ink">{d.title || 'Formulário'}</h3>
+          </div>
+          {d.description ? (
+            <p className="line-clamp-2 text-xs text-dim">{d.description}</p>
+          ) : null}
+          <div className="flex flex-col gap-1.5">
+            {(d.fields || ['Nome', 'E-mail']).slice(0, 2).map((f: string) => (
+              <div key={f} className="flex h-5 items-center rounded-md px-2 text-[10px] text-faint"
+                style={{ border: '1px solid var(--color-border)' }}>
+                {f}
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+
     case 'faq':
       return (
         <div className="flex h-full w-full flex-col justify-between gap-2">

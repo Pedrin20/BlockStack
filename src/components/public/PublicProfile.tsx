@@ -53,9 +53,11 @@ const SIZE_CLASSES: Record<BlockSize, string> = {
 }
 
 const DENSITY_CONFIG: Record<Density, { rows: string; gap: string }> = {
-  compact: { rows: 'auto-rows-[112px]', gap: 'gap-2' },
-  standard: { rows: 'auto-rows-[128px]', gap: 'gap-3' },
-  spaced: { rows: 'auto-rows-[140px]', gap: 'gap-4' },
+  // Linhas com altura mínima — blocos mais altos (Formulário, FAQ, Depoimentos)
+  // crescem com o conteúdo em vez de cortar no overflow.
+  compact: { rows: 'auto-rows-[minmax(112px,auto)]', gap: 'gap-2' },
+  standard: { rows: 'auto-rows-[minmax(128px,auto)]', gap: 'gap-3' },
+  spaced: { rows: 'auto-rows-[minmax(140px,auto)]', gap: 'gap-4' },
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -255,11 +257,11 @@ export function PublicProfile({
         .gl-public .gl-pill { transition: filter 0.15s ease, transform 0.15s ease; cursor: pointer; }
         .gl-public .gl-pill:hover { filter: brightness(1.08); transform: translateY(-1px); }
         .gl-public .gl-pill:active { transform: translateY(0); }
-        .gl-public input.gl-field:focus {
+        .gl-public input.gl-field:focus, .gl-public textarea.gl-field:focus {
           border-color: var(--pv-accent) !important;
           box-shadow: 0 0 0 3px color-mix(in srgb, var(--pv-accent) 25%, transparent);
         }
-        .gl-public input.gl-field::placeholder { color: var(--pv-muted); }
+        .gl-public input.gl-field::placeholder, .gl-public textarea.gl-field::placeholder { color: var(--pv-muted); }
         .gl-public .gl-faq-row { transition: background 0.15s ease; }
         .gl-public .gl-faq-row:hover { background: color-mix(in srgb, var(--pv-text) 10%, transparent) !important; }
       `}</style>
@@ -620,7 +622,7 @@ function ThemedBody({ block, preview = false }: { block: Block; preview?: boolea
       )
 
     case 'form':
-      return <LeadCapture block={block} source="form" title={d.title || 'Formulário'} buttonText={d.buttonText || 'Enviar'} fields={d.fields || ['Nome', 'E-mail']} successMessage={d.successMessage} preview={preview} />
+      return <LeadCapture block={block} source="form" title={d.title || 'Formulário'} description={d.description} buttonText={d.buttonText || 'Enviar'} fields={d.fields || ['Nome', 'E-mail']} successMessage={d.successMessage} preview={preview} />
 
     case 'faq':
       return <FaqAccordion title={d.title || 'FAQ'} items={d.items || []} />
@@ -1058,6 +1060,8 @@ function LeadCapture({
   /** Na prévia do editor, o envio é demonstrativo — não grava na Audiência. */
   preview?: boolean
 }) {
+  // Campos com nome de mensagem viram textarea — caixa de resposta do visitante.
+  const isMessageField = (field: string) => /mensagem|message|texto|textarea|biografia/i.test(field)
   const [values, setValues] = useState<Record<string, string>>({})
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -1103,6 +1107,12 @@ function LeadCapture({
     setSubmitting(true)
     try {
       if (!preview) {
+        // Respostas estruturadas campo-a-campo — exibidas no inbox da Audiência.
+        const structured = formFields.reduce<Record<string, string>>((acc, field) => {
+          const value = (values[field] || '').trim()
+          if (value) acc[field] = value
+          return acc
+        }, {})
         await createLead({
           userId: block.userId,
           blockId: block.id,
@@ -1111,6 +1121,7 @@ function LeadCapture({
           source,
           sourceLabel: `${source === 'newsletter' ? 'Newsletter' : 'Formulário'}: ${title}`,
           message: message || undefined,
+          fields: structured,
         })
       }
       setSubmitted(true)
@@ -1119,6 +1130,43 @@ function LeadCapture({
     } finally {
       setSubmitting(false)
     }
+  }
+
+  /** Um campo do formulário — “Mensagem” e similares viram textarea. */
+  function renderFieldInput(field: string) {
+    const isEmail = /e-?mail|mail/i.test(field)
+    if (isMessageField(field)) {
+      return (
+        <textarea
+          key={field}
+          required={source === 'form'}
+          rows={4}
+          value={values[field] || ''}
+          onChange={(event) => {
+            setValues((current) => ({ ...current, [field]: event.target.value }))
+            if (error) setError(null)
+          }}
+          placeholder={field}
+          className="gl-field resize-none"
+          style={{ ...inputStyle(), flex: undefined, width: '100%' }}
+        />
+      )
+    }
+    return (
+      <input
+        key={field}
+        required={source === 'form' || isEmail}
+        type={isEmail ? 'email' : 'text'}
+        value={values[field] || ''}
+        onChange={(event) => {
+          setValues((current) => ({ ...current, [field]: event.target.value }))
+          if (error) setError(null)
+        }}
+        placeholder={isEmail ? emailPlaceholder || field : field}
+        className="gl-field"
+        style={inputStyle()}
+      />
+    )
   }
 
   if (submitted) {
@@ -1147,24 +1195,7 @@ function LeadCapture({
       </div>
       {description ? <p className="text-xs" style={mutedStyle()}>{description}</p> : null}
       <div className={`mt-1 flex gap-2 ${source === 'form' ? 'flex-col' : ''}`}>
-        {formFields.slice(0, source === 'form' ? 3 : 1).map((field) => {
-          const isEmail = /e-?mail|mail/i.test(field)
-          return (
-            <input
-              key={field}
-              required={source === 'form' || isEmail}
-              type={isEmail ? 'email' : 'text'}
-              value={values[field] || ''}
-              onChange={(event) => {
-                setValues((current) => ({ ...current, [field]: event.target.value }))
-                if (error) setError(null)
-              }}
-              placeholder={isEmail ? emailPlaceholder || field : field}
-              className="gl-field"
-              style={inputStyle()}
-            />
-          )
-        })}
+        {(source === 'newsletter' ? formFields : formFields.slice(0, 4)).map((field) => renderFieldInput(field))}
         <ActionPill type="submit" disabled={submitting}>
           {submitting ? 'Enviando...' : buttonText}
         </ActionPill>

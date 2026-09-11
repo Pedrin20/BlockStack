@@ -58,7 +58,7 @@ export function PageBuilder({ userId }: { userId: string }) {
       spotify: { uri: '', variant: 'track' },
       youtube: { videoUrl: '', title: '' },
       calendar: { title: 'Agendar consulta', description: 'Escolha o melhor horário', calUrl: '', availableHours: 'Seg-Sex, 9h às 18h' },
-      form: { title: 'Fale comigo', fields: ['Nome', 'E-mail', 'Mensagem'], buttonText: 'Enviar', successMessage: 'Mensagem enviada!' },
+      form: { title: 'Fale comigo', description: 'Deixe sua mensagem que eu respondo em breve', fields: ['Nome', 'E-mail', 'Mensagem'], buttonText: 'Enviar', successMessage: 'Mensagem enviada!' },
       faq: { title: 'Perguntas frequentes', items: [{ question: 'Como funciona?', answer: 'Responda aqui...' }] },
       testimonial: { title: 'O que dizem sobre mim', items: [{ name: 'Cliente', role: 'Empresa', text: 'Excelente profissional!', avatarUrl: '' }] },
     }

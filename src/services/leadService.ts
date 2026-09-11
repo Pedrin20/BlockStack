@@ -1,4 +1,4 @@
-import { addDoc, collection, onSnapshot, query, serverTimestamp, where } from 'firebase/firestore'
+import { addDoc, collection, deleteDoc, doc, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore'
 import { db } from '../firebase'
 
 export type LeadSource = 'newsletter' | 'form'
@@ -14,12 +14,17 @@ export interface Lead {
   sourceLabel?: string
   /** Conteúdo livre (mensagem/campos customizados) enviado no bloco */
   message?: string
+  /** Respostas campo-a-campo enviadas no bloco de formulário */
+  fields?: Record<string, string>
+  /** Controle do inbox — true depois que o dono abre a mensagem */
+  read?: boolean
   createdAt?: { toDate?: () => Date } | null
 }
 
 export async function createLead(lead: Omit<Lead, 'id' | 'createdAt'>) {
   await addDoc(collection(db, 'leads'), {
     ...lead,
+    read: false,
     createdAt: serverTimestamp(),
   })
 }
@@ -34,4 +39,19 @@ export function subscribeToLeads(userId: string, callback: (leads: Lead[]) => vo
     },
     () => callback([]),
   )
+}
+
+/** Marca uma mensagem como lida (chamado ao abrir no inbox). */
+export function markLeadRead(id: string) {
+  return updateDoc(doc(db, 'leads', id), { read: true })
+}
+
+/** Volta a mensagem para não lida. */
+export function markLeadUnread(id: string) {
+  return updateDoc(doc(db, 'leads', id), { read: false })
+}
+
+/** Remove a mensagem do inbox. */
+export function deleteLead(id: string) {
+  return deleteDoc(doc(db, 'leads', id))
 }

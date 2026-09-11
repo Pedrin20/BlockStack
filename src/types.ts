@@ -249,6 +249,8 @@ export interface CalendarBlockData {
 
 export interface FormBlockData {
   title: string
+  /** Subtítulo opcional exibido abaixo do título do formulário */
+  description: string
   fields: string[]
   buttonText: string
   successMessage: string

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { subscribeToLeads } from '../services/leadService'
 import {
   LayoutDashboard,
   LayoutTemplate,
@@ -26,6 +27,15 @@ export function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [collapsed] = useState(false)
+  const [unreadLeads, setUnreadLeads] = useState(0)
+
+  // Contador de mensagens não lidas para o badge da Audiência.
+  useEffect(() => {
+    if (!user?.uid) return
+    return subscribeToLeads(user.uid, (leads) => {
+      setUnreadLeads(leads.filter((lead) => !lead.read).length)
+    })
+  }, [user?.uid])
 
   async function handleLogout() {
     await logout()
@@ -73,7 +83,17 @@ export function Sidebar() {
               }`
             }
           >
-            <item.icon className="h-5 w-5 shrink-0" />
+            <span className="relative shrink-0">
+            <item.icon className="h-5 w-5" />
+            {item.to === '/dashboard/audience' && unreadLeads > 0 ? (
+              <span
+                className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold"
+                style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}
+              >
+                {unreadLeads > 9 ? '9+' : unreadLeads}
+              </span>
+            ) : null}
+          </span>
             {!collapsed && <span>{item.label}</span>}
           </NavLink>
         ))}
